@@ -5,8 +5,8 @@
 
 # user inpu: define paths
 #------------------------------------------
-raw_dir=~/Desktop/raw
-bids_dir=~/Desktop/bids_data
+raw_dir=/projects/dsnlab/dcosme/RRV/raw
+bids_dir=/projects/dsnlab/dcosme/RRV/bids_data
 
 # change directories to raw_dir
 #------------------------------------------
@@ -45,4 +45,4 @@ echo -e "{\n\t\"Name\": \"RRV\",\n\t\"BIDSVersion\": \"1.1.1\",\n}" > "${bids_di
 echo -e "{\n\t\"RepetitionTime\": 0.0082,\n\t\"EchoTime\": 0.0037,\n\t\"FlipAngle\": 8,\n\t\"InversionTime\": 0.9\n}" > "${bids_dir}"/T1w.json
 
 # task
-echo -e "{\n\t\"TaskName\": \"CR\",\n\t\"RepetitionTime\": 2.5,\n\t\"EchoTime\": 0.035,\n\t\"FlipAngle\": 90,\n\t\"PhaseEncodingDirection\": \"j\",\n}" > "${bids_dir}"/task-CR_bold.json
+echo -e "{\n\t\"TaskName\": \"CR\",\n\t\"RepetitionTime\": 2.5,\n\t\"EchoTime\": 0.035,\n\t\"FlipAngle\": 90,\n\t\"PhaseEncodingDirection\": \"j\"\n}" > "${bids_dir}"/task-CR_bold.json
