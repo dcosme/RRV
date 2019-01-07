@@ -39,7 +39,7 @@ done
 # make .json files
 #------------------------------------------
 # dataset description
-echo -e "{\n\t\"Name\": \"RRV\",\n\t\"BIDSVersion\": \"1.1.1\",\n}" > "${bids_dir}"/dataset_description.json
+echo -e "{\n\t\"Name\": \"RRV\",\n\t\"BIDSVersion\": \"1.1.1\"\n}" > "${bids_dir}"/dataset_description.json
 
 # T1w
 echo -e "{\n\t\"RepetitionTime\": 0.0082,\n\t\"EchoTime\": 0.0037,\n\t\"FlipAngle\": 8,\n\t\"InversionTime\": 0.9\n}" > "${bids_dir}"/T1w.json
