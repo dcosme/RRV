@@ -35,6 +35,7 @@ subPattern = 'sub-(.*[0-9]{3})'
 wavePattern = 'ses-wave([0-9]{1})' # just extract the number
 taskPattern = 'task-(CR)'
 runPattern = 'acq-([0-9]{1})'
+subsToIgnore = 'RRV042'
 writeRP = TRUE
 writePlot = TRUE
 writeEuclidean = TRUE

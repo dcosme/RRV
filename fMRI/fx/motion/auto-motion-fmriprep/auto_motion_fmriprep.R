@@ -73,6 +73,12 @@ for (file in fileList) {
 }
 
 #------------------------------------------------------
+# filter out specified subs
+#------------------------------------------------------
+dataset = dataset %>%
+  filter(!subjectID %in% subsToIgnore)
+
+#------------------------------------------------------
 # apply classifier
 #------------------------------------------------------
 # load classifier
