@@ -53,11 +53,11 @@ echo ---------------------------------------------------------------------------
 module load afni
 for i in $(seq 1 $RUNS)
 	do echo "calculating ACF parameters for run${i}"
-	3dFWHMx -acf -mask mask.nii residuals_run${i}.nii.gz >> ACRRVarameters.1D
+	3dFWHMx -acf -mask mask.nii residuals_run${i}.nii.gz >> ACFparameters.1D
 done
 
 # average ACF parameters
 echo -------------------------------------------------------------------------------
 echo "Averaging ACF parameters"
 echo -------------------------------------------------------------------------------
-3dTstat -mean -prefix - ACRRVarameters.1D'{1..$(2)}'\' >> ACRRVarameters_average.1D
+3dTstat -mean -prefix - ACFparameters.1D'{1..$(2)}'\' >> ACFparameters_average.1D
