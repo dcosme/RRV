@@ -1,6 +1,6 @@
 %-----------------------------------------------------------------------
-% Job saved on 29-Dec-2018 16:53:10 by cfg_util (rev $Rev: 6942 $)
-% spm SPM - SPM12 (7219)
+% Job saved on 16-Jan-2019 16:42:47 by cfg_util (rev $Rev: 6460 $)
+% spm SPM - SPM12 (6906)
 % cfg_basicio BasicIO - Unknown
 %-----------------------------------------------------------------------
 matlabbatch{1}.spm.util.exp_frames.files = {'/projects/dsnlab/dcosme/RRV/bids_data/derivatives/fmriprep/sub-RRV001/ses-wave1/func/s6_sub-RRV001_ses-wave1_task-CR_acq-1_bold_space-MNI152NLin2009cAsym_preproc.nii,1'};
@@ -11,7 +11,7 @@ matlabbatch{3}.spm.stats.fmri_spec.dir = {'/projects/dsnlab/dcosme/RRV/nonbids_d
 matlabbatch{3}.spm.stats.fmri_spec.timing.units = 'secs';
 matlabbatch{3}.spm.stats.fmri_spec.timing.RT = 2.5;
 matlabbatch{3}.spm.stats.fmri_spec.timing.fmri_t = 36;
-matlabbatch{3}.spm.stats.fmri_spec.timing.fmri_t0 = 14.4;
+matlabbatch{3}.spm.stats.fmri_spec.timing.fmri_t0 = 8;
 matlabbatch{3}.spm.stats.fmri_spec.sess(1).scans(1) = cfg_dep('Expand image frames: Expanded filename list.', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
 matlabbatch{3}.spm.stats.fmri_spec.sess(1).cond = struct('name', {}, 'onset', {}, 'duration', {}, 'tmod', {}, 'pmod', {}, 'orth', {});
 matlabbatch{3}.spm.stats.fmri_spec.sess(1).multi = {'/projects/dsnlab/dcosme/RRV/RRV_scripts/fMRI/fx/multiconds/event/RRV001_CR_run1.mat'};
@@ -29,5 +29,5 @@ matlabbatch{3}.spm.stats.fmri_spec.bases.hrf.derivs = [0 0];
 matlabbatch{3}.spm.stats.fmri_spec.volt = 1;
 matlabbatch{3}.spm.stats.fmri_spec.global = 'None';
 matlabbatch{3}.spm.stats.fmri_spec.mthresh = -Inf;
-matlabbatch{3}.spm.stats.fmri_spec.mask = {'/projects/dsnlab/dcosme/SPM12/canonical/MNI152lin_T1_2mm_brain_mask.nii,1'};
+matlabbatch{3}.spm.stats.fmri_spec.mask = {'/projects/dsnlab/shared/SPM12/canonical/MNI152lin_T1_2mm_brain_mask.nii,1'};
 matlabbatch{3}.spm.stats.fmri_spec.cvi = 'FAST';
