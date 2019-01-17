@@ -6,9 +6,9 @@
 #
 # Set your directories
 
-freesurferlicense=/projects/dsnlab/shared/BIDS/freesurfer_license.txt
-group_dir=/projects/dcosme/ #set path to directory within which study folder lives
-container=BIDS/SingularityContainers/fmriprep-latest-2018-09-05.simg #relative to group_dir
+freesurferlicense=/projects/dsnlab/dcosme/freesurfer_license.txt
+group_dir=/projects/dsnlab/dcosme/ #set path to directory within which study folder lives
+container=/projects/dsnlab/shared/BIDS/SingularityContainers/fmriprep-latest-2018-09-05.simg #relative to group_dir
 study=RRV
 study_dir="${group_dir}""${study}"
 output_dir="${study_dir}"/RRV_scripts/fMRI/ppc/output
