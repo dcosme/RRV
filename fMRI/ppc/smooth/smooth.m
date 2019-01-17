@@ -1,5 +1,5 @@
 %-----------------------------------------------------------------------
-% Job saved on 25-Oct-2018 14:49:39 by cfg_util (rev $Rev: 6460 $)
+% Job saved on 16-Jan-2019 16:34:20 by cfg_util (rev $Rev: 6460 $)
 % spm SPM - SPM12 (6906)
 % cfg_basicio BasicIO - Unknown
 %-----------------------------------------------------------------------
@@ -7,12 +7,12 @@ matlabbatch{1}.cfg_basicio.file_dir.file_ops.file_fplist.dir = {'/projects/dsnla
 matlabbatch{1}.cfg_basicio.file_dir.file_ops.file_fplist.filter = 'sub-RRV001_ses-wave1_task-CR_acq-1_bold_space-MNI152NLin2009cAsym_preproc.nii.gz';
 matlabbatch{1}.cfg_basicio.file_dir.file_ops.file_fplist.rec = 'FPList';
 matlabbatch{2}.cfg_basicio.file_dir.file_ops.file_fplist.dir = {'/projects/dsnlab/dcosme/RRV/bids_data/derivatives/fmriprep/sub-RRV001/ses-wave1/func'};
-matlabbatch{2}.cfg_basicio.file_dir.file_ops.file_fplist.filter = 'sub-RRV001_ses-wave1_task-CR_acq-1_bold_space-MNI152NLin2009cAsym_preproc.nii.gz';
+matlabbatch{2}.cfg_basicio.file_dir.file_ops.file_fplist.filter = 'sub-RRV001_ses-wave1_task-CR_acq-2_bold_space-MNI152NLin2009cAsym_preproc.nii.gz';
 matlabbatch{2}.cfg_basicio.file_dir.file_ops.file_fplist.rec = 'FPList';
 matlabbatch{3}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.files(1) = cfg_dep('File Selector (Batch Mode): Selected Files (sub-RRV001_ses-wave1_task-CR_acq-1_bold_space-MNI152NLin2009cAsym_preproc.nii.gz)', substruct('.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
 matlabbatch{3}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.outdir = {''};
 matlabbatch{3}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.keep = true;
-matlabbatch{4}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.files(1) = cfg_dep('File Selector (Batch Mode): Selected Files (sub-RRV001_ses-wave1_task-CR_acq-1_bold_space-MNI152NLin2009cAsym_preproc.nii.gz)', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
+matlabbatch{4}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.files(1) = cfg_dep('File Selector (Batch Mode): Selected Files (sub-RRV001_ses-wave1_task-CR_acq-2_bold_space-MNI152NLin2009cAsym_preproc.nii.gz)', substruct('.','val', '{}',{2}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('.','files'));
 matlabbatch{4}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.outdir = {''};
 matlabbatch{4}.cfg_basicio.file_dir.file_ops.cfg_gunzip_files.keep = true;
 matlabbatch{5}.spm.util.exp_frames.files(1) = cfg_dep('Gunzip Files: Gunzipped Files', substruct('.','val', '{}',{3}, '.','val', '{}',{1}, '.','val', '{}',{1}, '.','val', '{}',{1}), substruct('()',{':'}));
