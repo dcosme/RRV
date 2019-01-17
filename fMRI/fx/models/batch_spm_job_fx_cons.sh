@@ -15,25 +15,25 @@ STUDY=RRV
 SUBJLIST=`cat subject_list.txt`
 
 # Which SID should be replaced?
-REPLACESID='001'
+REPLACESID=001
 
 # SPM Path
-SPM_PATH=/projects/dsnlab/dcosme/SPM12
+SPM_PATH=/projects/dsnlab/shared/SPM12
 
 # Set scripts directory path
 SCRIPTS_DIR=/projects/dsnlab/dcosme/${STUDY}/${STUDY}_scripts
 
 # Set MATLAB script path
-SCRIPT=${SCRIPTS_DIR}/fMRI/fx/models/CR/wave1/fx_event_noderiv_cons.m
+SCRIPT=${SCRIPTS_DIR}/fMRI/fx/models/fx_event_cons.m
 
 # Set shell script to execute
 SHELL_SCRIPT=spm_job_residuals.sh
 
 # RRV the results files
-RESULTS_INFIX=fx_event_noderiv_cons
+RESULTS_INFIX=fx_event_cons
 
 # Set output dir and make it if it doesn't exist
-OUTPUTDIR=${SCRIPTS_DIR}/fMRI/fx/models/CR/wave1/output
+OUTPUTDIR=${SCRIPTS_DIR}/fMRI/fx/models/output
 
 if [ ! -d ${OUTPUTDIR} ]; then
 	mkdir -p ${OUTPUTDIR}
@@ -43,11 +43,11 @@ fi
 RUNS=(1 2)
 
 # model output directory
-MODEL_DIR=/projects/dsnlab/dcosme/RRV/nonbids_data/fMRI/fx/models/CR/wave1/event_noderiv
+MODEL_DIR=/projects/dsnlab/dcosme/RRV/nonbids_data/fMRI/fx/models/event
 
 # Make text file with residual files for each run
-echo $(printf "Res_%04d.nii\n" {1..122}) > residuals_run1.txt
-echo $(printf "Res_%04d.nii\n" {123..244}) > residuals_run2.txt
+echo $(printf "Res_%04d.nii\n" {1..250}) > residuals_run1.txt
+echo $(printf "Res_%04d.nii\n" {251..500}) > residuals_run2.txt
 
 # Set job parameters
 cpuspertask=1

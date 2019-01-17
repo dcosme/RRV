@@ -15,19 +15,19 @@ SUBJLIST=`cat subject_list.txt`
 REPLACESID=001
 
 # SPM Path
-SPM_PATH=/projects/dsnlab/dcosme/SPM12
+SPM_PATH=/projects/dsnlab/shared/SPM12
 
 # Set MATLAB script path
-SCRIPT=${STUDY}/fMRI/fx/models/CR/wave1/fx_event_noderiv.m
+SCRIPT=${STUDY}/fMRI/fx/models/fx_event.m
 
 # Set shell script to execute
 SHELL_SCRIPT=spm_job.sh
 
 # RRV the results files
-RESULTS_INFIX=fx_event_noderiv
+RESULTS_INFIX=fx_event
 
 # Set output dir and make it if it doesn't exist
-OUTPUTDIR=${STUDY}/fMRI/fx/models/CR/wave1/output
+OUTPUTDIR=${STUDY}/fMRI/fx/models/output
 
 if [ ! -d ${OUTPUTDIR} ]; then
 	mkdir -p ${OUTPUTDIR}

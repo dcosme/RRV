@@ -36,7 +36,6 @@ echo ---------------------------------------------------------------------------
 module load fsl
 script_dir=$(pwd)
 RUNS=$(ls residuals*.txt | wc -l)
-#res_dir=/projects/dsnlab/dcosme/RRV/nonbids_data/fMRI/fx/models/CR/wave1/event/sub-RRV${SUB}
 cd ${RES_DIR}
 
 for i in $(seq 1 $RUNS)
