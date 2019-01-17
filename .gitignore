@@ -1,0 +1,7 @@
+.DS_Store
+.DS_Store
+/**/sid_batches/*
+/**/output/*
+*.log
+*_error.txt
+*_output.txt
