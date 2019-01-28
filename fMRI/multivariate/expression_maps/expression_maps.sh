@@ -32,9 +32,9 @@ fi
 # ------------------------------------------------------------------------------------------
 for map in ${maps[@]}; do 
 	3dAllineate -source "${map_dir}"/"${map}".nii.gz -master "${image_dir}"/mask.nii -final NN -1Dparam_apply '1D: 12@0'\' -prefix "${map_dir}"/aligned_"${map}"
-	3dcalc -a "${map_dir}"/aligned_"${map}" -expr 'step(a)' -prefix "${map_dir}"/bin_aligned_"${map}"
+	3dcalc -a "${map_dir}"/aligned_"${map}"+tlrc -expr 'step(a)' -prefix "${map_dir}"/bin_aligned_"${map}"
 	for image in ${images[@]}; do 
 		echo "${SUB}" "${map}" "${image}" "unmasked" `3ddot -dodot "${map_dir}"/"${model}"/aligned_"${map}"+tlrc "${image_dir}"/"${image}"` >> "${output_dir}"/"${SUB}"_dotProducts.txt
-		echo "${SUB}" "${map}" "${image}" "masked" `3ddot -mask "${map_dir}"/bin_aligned_"${map}" -dodot "${map_dir}"/"${model}"/aligned_"${map}"+tlrc "${image_dir}"/"${image}"` >> "${output_dir}"/"${SUB}"_dotProducts.txt
+		echo "${SUB}" "${map}" "${image}" "masked" `3ddot -mask "${map_dir}"/bin_aligned_"${map}"+tlrc -dodot "${map_dir}"/"${model}"/aligned_"${map}"+tlrc "${image_dir}"/"${image}"` >> "${output_dir}"/"${SUB}"_dotProducts.txt
 	done
 done
