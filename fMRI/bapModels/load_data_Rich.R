@@ -71,7 +71,8 @@ for (file in file_list) {
                     rename("subjectID" = V1,
                            "map" = V2,
                            "con" = V3,
-                           "dotProduct" = V4) %>%
+                           "mask" = V4,
+                           "dotProduct" = V5) %>%
                     extract(map, c("process", "test"), "(.*)_(association|uniformity)-.*", remove = FALSE), error = function(e) message(file))
   
   dots = rbind(dots, temp)
