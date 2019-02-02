@@ -81,3 +81,37 @@ for (file in file_list) {
 
 # join data frames
 dataset = full_join(betas, dots, by = c("subjectID", "con", "process"))
+
+#### RICH ADDED ON 2/2/19
+
+# Create multiple data files so only show dotproducts for association or uniformity test, masked or unmasked:
+d_assoc_mask <- filter(dataset, test == "association" & mask == "masked")
+d_assoc_unmask <- filter(dataset, test == "association" & mask == "unmasked")
+d_unif_mask <- filter(dataset, test=="uniformity" & mask=="masked")
+d_unif_unmask <- filter(dataset, test=="uniformity" & mask=="unmasked")
+
+write.table(d_assoc_mask, "dataset_assoc_masked.csv", sep=",", col.names = NA)
+write.table(d_assoc_unmask, "dataset_assoc_unmasked.csv", sep=",", col.names = NA)
+write.table(d_unif_mask, "dataset_unif_masked.csv", sep=",", col.names = NA)
+write.table(d_unif_unmask, "dataset_unif_unmasked.csv", sep=",", col.names = NA)
+
+# Only get aggregate/averaged data (both runs of CueReact)
+d_assoc_mask_agg <- filter(d_assoc_mask, session=="all")
+d_assoc_unmask_agg <- filter(d_assoc_unmask, session=="all")
+d_unif_mask_agg <- filter(d_unif_mask, session=="all")
+d_unif_unmask_agg <- filter(d_unif_unmask, session=="all")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
