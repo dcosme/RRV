@@ -101,6 +101,10 @@ d_assoc_unmask_agg <- filter(d_assoc_unmask, session=="all")
 d_unif_mask_agg <- filter(d_unif_mask, session=="all")
 d_unif_unmask_agg <- filter(d_unif_unmask, session=="all")
 
+write.table(d_assoc_mask_agg, "dataset_assoc_masked_AGG.csv", sep=",", col.names = NA)
+write.table(d_assoc_unmask_agg, "dataset_assoc_unmasked_AGG.csv", sep=",", col.names = NA)
+write.table(d_unif_mask_agg, "dataset_unif_masked_AGG.csv", sep=",", col.names = NA)
+write.table(d_unif_unmask_agg, "dataset_unif_unmasked_AGG.csv", sep=",", col.names = NA)
 
 
 
