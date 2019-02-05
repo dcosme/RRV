@@ -17,12 +17,17 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+```
+
+# load packages
+```{r}
+library(tidyverse)
 ```
 
 # source data
 ```{r}
-source("load_data.R")
+source("load_data_Rich.R")
 ```
 
 # exclude participants
@@ -33,4 +38,98 @@ dataset.ex = dataset %>%
   filter(!subjectID %in% c("RRV040", "RRV042"))
 ```
 
+# plot data
+## correlations all
+```{r, fig.width=10, fig.height=10}
+dataset.ex %>%
+  filter(mask == "masked" & session == "all" & test == "association" & control == "nature") %>%
+  select(-c(xyz, roi, meanPE, sdPE)) %>%
+  unique() %>%
+  gather(outcome, value, bmi, fat, contains("_g")) %>%
+  filter(outcome %in% c("snack_total_g", "bmi", "fat")) %>%
+  ggplot(aes(dotProduct, value, color = condition)) +
+    geom_point(alpha = .1) +
+    geom_smooth(method = "lm", alpha = .05) +
+    facet_wrap(outcome~process, scales = "free", nrow = 3) + 
+    theme_minimal(base_size = 10) +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+```
 
+## correlations food
+```{r, fig.width=8}
+dataset.ex %>%
+  filter(mask == "masked" & session == "all" & test == "association" & control == "nature" & condition == "food") %>%
+  select(-c(xyz, roi, meanPE, sdPE)) %>%
+  unique() %>%
+  gather(outcome, value, bmi, fat, contains("_g")) %>%
+  filter(outcome %in% c("snack_total_g", "bmi", "fat")) %>%
+  ggplot(aes(dotProduct, value, color = outcome)) +
+    geom_point(alpha = .1) +
+    geom_smooth(method = "lm", alpha = .05) +
+    facet_wrap(~process, scales = "free", nrow = 1) + 
+    theme_minimal(base_size = 10) +
+    theme(axis.line = element_line(colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+```
+
+# run models
+```{r}
+modeling.data = dataset.ex %>%
+  filter(mask == "masked" & session == "all" & test == "association" & control == "nature" & condition == "food") %>%
+  select(-c(xyz, roi, meanPE, sdPE, map)) %>%
+  unique() %>%
+  spread(process, dotProduct)
+
+```
+
+## snack total
+```{r}
+snack.0 = lm(snack_total_g ~ 1, data = modeling.data)
+snack.1 = lm(snack_total_g ~ cognitive_control, data = modeling.data)
+snack.2 = lm(snack_total_g ~ craving, data = modeling.data) 
+snack.3 = lm(snack_total_g ~ value, data = modeling.data) 
+snack.4 = lm(snack_total_g ~ cognitive_control + craving, data = modeling.data) 
+snack.5 = lm(snack_total_g ~ cognitive_control + value, data = modeling.data) 
+snack.6 = lm(snack_total_g ~ craving + value, data = modeling.data) 
+snack.7 = lm(snack_total_g ~ cognitive_control + craving + value, data = modeling.data) 
+
+AIC(snack.0, snack.1, snack.2, snack.3, snack.4, snack.5, snack.6, snack.7)
+summary(snack.1)
+```
+
+## bmi
+```{r}
+bmi.0 = lm(bmi ~ 1, data = modeling.data)
+bmi.1 = lm(bmi ~ cognitive_control, data = modeling.data)
+bmi.2 = lm(bmi ~ craving, data = modeling.data) 
+bmi.3 = lm(bmi ~ value, data = modeling.data) 
+bmi.4 = lm(bmi ~ cognitive_control + craving, data = modeling.data) 
+bmi.5 = lm(bmi ~ cognitive_control + value, data = modeling.data) 
+bmi.6 = lm(bmi ~ craving + value, data = modeling.data) 
+bmi.7 = lm(bmi ~ cognitive_control + craving + value, data = modeling.data) 
+
+AIC(bmi.0, bmi.1, bmi.2, bmi.3, bmi.4, bmi.5, bmi.6, bmi.7)
+summary(bmi.0)
+```
+
+## fat
+```{r}
+fat.0 = lm(fat ~ 1, data = modeling.data)
+fat.1 = lm(fat ~ cognitive_control, data = modeling.data)
+fat.2 = lm(fat ~ craving, data = modeling.data) 
+fat.3 = lm(fat ~ value, data = modeling.data) 
+fat.4 = lm(fat ~ cognitive_control + craving, data = modeling.data) 
+fat.5 = lm(fat ~ cognitive_control + value, data = modeling.data) 
+fat.6 = lm(fat ~ craving + value, data = modeling.data) 
+fat.7 = lm(fat ~ cognitive_control + craving + value, data = modeling.data) 
+
+AIC(fat.0, fat.1, fat.2, fat.3, fat.4, fat.5, fat.6, fat.7)
+summary(fat.0)
+```

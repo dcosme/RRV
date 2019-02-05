@@ -1,0 +1,48 @@
+﻿DBIC_ID,newID,Age,Gender,Hispanic,Race:,bmi,fat,mm_g,skittles_g,nuts_g,snack_total_g,snack_dichot
+01may15fz,RRV001,22,F,N,Asian or Pacific Islander,22,16.6,,,,,
+02apr15at,RRV002,20,M,N,White,30.9,22.1,16,1,1,18,1
+02jun15ky,RRV003,18,F,N,Asian or Pacific Islander/White,19.8,10.8,,,,,
+02jun15sm,RRV004,20,F,N,White,18.9,14.6,,,,,
+02mar15aj,RRV005,19,F,N,White,19.6,24.5,12,9,1,22,1
+03apr15al,RRV006,19,M,N,White,23,11.9,0,0,0,0,0
+03apr15eb,RRV007,,,,,,,,,,,
+03apr15eh,RRV008,22,F,N,Asian or Pacific Islander,24.6,29.1,0,0,0,0,0
+03apr15jf,RRV009,23,F,N,White,24.8,32.1,0,0,0,0,0
+06apr15lt,RRV010,22,F,N,White,,,,,,,
+06apr15sh,RRV011,22,F,N,White,24.7,29.2,0,0,0,0,0
+06mar15zs,RRV012,19,F,N,White,21,22.4,1,8,0,9,1
+07apr15as,RRV013,22,M,N,White,18.8,5.6,14,0,3,17,1
+07apr15as2,RRV014,20,M,N,Asian or Pacific Islander,,,,,,,
+07apr15cn,RRV015,20,M,Y,White,23.5,8.9,0,0,0,0,0
+07apr15es,RRV016,21,F,N,Asian or Pacific Islander,23.7,25.4,0,19,0,19,1
+07apr15me,RRV017,18,F,N,White,,,,,,,
+07apr15mm,RRV018,20,F,N,White,,,,,,,
+07may15ha,RRV019,20,M,N,Other or Unknown,20.4,12.2,,,,,
+08mar15cf,RRV020,18,F,Y,White,23.6,27.3,6,9,18,33,1
+09apr15aw,RRV021,19,F,N,White,24.5,29.9,0,0,1,1,1
+13apr15kp,RRV022,20,F,N,Asian or Pacific Islander,21,24.3,0,0,0,0,0
+14apr15rg,RRV023,22,F,N,White,24.5,27.7,0,22,14,36,1
+15apr15jy,RRV024,18,F,N,White,24.6,32.6,0,0,0,0,0
+15apr15mp,RRV025,19,F,N,White,20.6,17.1,1,3,0,4,1
+16apr15js,RRV026,19,F,Y,White,19.9,21.1,0,0,0,0,0
+16feb15rn,RRV027,19,F,N,Asian or Pacific Islander,24.2,28.8,15,7,22,44,1
+16feb15sf,RRV028,19,F,N,White,26.1,32.2,0,0,0,0,0
+16feb15zb,RRV029,19,F,N,Black,28.1,33.3,0,0,0,0,0
+18feb15aa,RRV030,18,F,N,Black,23.5,28.3,,,,,
+18feb15ap,RRV031,19,M,N,White,20.1,8.2,2,0,0,2,1
+18feb15kl,RRV032,18,F,N,White,24.5,30.4,10,0,20,30,1
+20feb15ac,RRV033,18,F,N,White,22.9,24.6,0,0,1,1,1
+20feb15as,RRV034,20,F,N,Asian or Pacific Islander,19.3,14.6,0,0,0,0,0
+20feb15pw,RRV035,19,M,N,Asian or Pacific Islander,22.8,15.5,3,3,0,6,1
+20feb15rw,RRV036,18,M,N,White,19.7,8.2,58,1,0,59,1
+23feb15bf,RRV037,18,M,N,White,23.6,12.6,0,1,0,1,1
+23feb15eb,RRV038,18,F,N,White,24.2,24.5,3,47,0,50,1
+23feb15jk,RRV039,19,F,N,Asian or Pacific Islander,19.6,13.4,2,2,7,11,1
+25feb15nh,RRV041,20,M,N,White,23.6,13.1,2,9,0,11,1
+27feb15bh,RRV043,18,F,N,White,37.8,44.2,2,0,0,2,1
+27feb15ea,RRV044,18,M,Y,Hispanic,24.1,14.9,26,0,29,55,1
+27feb15mc,RRV045,19,F,Y,White,30.4,34.6,1,1,0,2,1
+28apr15jr,RRV046,22,M,N,Black/White,25.6,16.4,,,,,
+28apr15js,RRV047,22,F,N,White,21.4,22.5,,,,,
+29apr15ma,RRV048,18,F,Y,Other or Unknown (Latino),20.7,26.1,,,,,
+30apr15kh,RRV049,20,F,N,White,19.9,22.5,,,,,
