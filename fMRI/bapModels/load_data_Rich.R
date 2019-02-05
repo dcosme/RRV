@@ -4,7 +4,7 @@
 library(tidyverse)
 
 # load parameter estimates
-file_dir = "/Users/richardlopez/Documents/GitHub/RRV_scripts/fMRI/roi/parameterEstimates"
+file_dir = "../roi/parameterEstimates"
 file_pattern = "RRV[0-9]{3}_parameterEstimates.txt"
 file_list = list.files(file_dir, pattern = file_pattern)
 
@@ -60,7 +60,7 @@ betas = betas_temp %>%
   select(subjectID, session, con, condition, control, xyz, roi, process, meanPE, sdPE)
 
 # load dot products
-file_dir = "/Users/richardlopez/Documents/GitHub/RRV_scripts/fMRI/multivariate/expression_maps/dotProducts"
+file_dir = "../multivariate/expression_maps/dotProducts"
 file_pattern = "RRV[0-9]{3}_dotProducts.txt"
 file_list = list.files(file_dir, pattern = file_pattern)
 
@@ -73,38 +73,52 @@ for (file in file_list) {
                            "con" = V3,
                            "mask" = V4,
                            "dotProduct" = V5) %>%
-                    extract(map, c("process", "test"), "(.*)_(association|uniformity)-.*", remove = FALSE), error = function(e) message(file))
+                    extract(map, c("process", "test"), "(.*)_(association|uniformity)-.*", remove = FALSE) %>%
+                    mutate(condition = ifelse(con %in% snack_cons, "snack",
+                                       ifelse(con %in% meal_cons, "meal",
+                                       ifelse(con %in% dessert_cons, "dessert",
+                                       ifelse(con %in% nature_cons, "nature",
+                                       ifelse(con %in% social_cons, "social",
+                                       ifelse(con %in% food_cons, "food", NA)))))),
+                           control = ifelse(con %in% sprintf("con_%04d.nii", c(19:30)), "nature", "rest"),
+                           session = ifelse(con %in% sprintf("con_%04d.nii", seq(1,30,3)), "1",
+                                     ifelse(con %in% sprintf("con_%04d.nii", seq(2,30,3)), "2", "all"))), error = function(e) message(file))
   
   dots = rbind(dots, temp)
   rm(temp)
 }
 
+# load outcomes
+outcomes = read.csv("demographics_outcomes.csv") %>%
+  rename("subjectID" = newID)
+
 # join data frames
-dataset = full_join(betas, dots, by = c("subjectID", "con", "process"))
+dataset = full_join(betas, dots, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
+  left_join(., outcomes, by = "subjectID")
 
 #### RICH ADDED ON 2/2/19
 
-# Create multiple data files so only show dotproducts for association or uniformity test, masked or unmasked:
-d_assoc_mask <- filter(dataset, test == "association" & mask == "masked")
-d_assoc_unmask <- filter(dataset, test == "association" & mask == "unmasked")
-d_unif_mask <- filter(dataset, test=="uniformity" & mask=="masked")
-d_unif_unmask <- filter(dataset, test=="uniformity" & mask=="unmasked")
-
-write.table(d_assoc_mask, "dataset_assoc_masked.csv", sep=",", col.names = NA)
-write.table(d_assoc_unmask, "dataset_assoc_unmasked.csv", sep=",", col.names = NA)
-write.table(d_unif_mask, "dataset_unif_masked.csv", sep=",", col.names = NA)
-write.table(d_unif_unmask, "dataset_unif_unmasked.csv", sep=",", col.names = NA)
-
-# Only get aggregate/averaged data (both runs of CueReact)
-d_assoc_mask_agg <- filter(d_assoc_mask, session=="all")
-d_assoc_unmask_agg <- filter(d_assoc_unmask, session=="all")
-d_unif_mask_agg <- filter(d_unif_mask, session=="all")
-d_unif_unmask_agg <- filter(d_unif_unmask, session=="all")
-
-write.table(d_assoc_mask_agg, "dataset_assoc_masked_AGG.csv", sep=",", col.names = NA)
-write.table(d_assoc_unmask_agg, "dataset_assoc_unmasked_AGG.csv", sep=",", col.names = NA)
-write.table(d_unif_mask_agg, "dataset_unif_masked_AGG.csv", sep=",", col.names = NA)
-write.table(d_unif_unmask_agg, "dataset_unif_unmasked_AGG.csv", sep=",", col.names = NA)
+# # Create multiple data files so only show dotproducts for association or uniformity test, masked or unmasked:
+# d_assoc_mask <- filter(dataset, test == "association" & mask == "masked")
+# d_assoc_unmask <- filter(dataset, test == "association" & mask == "unmasked")
+# d_unif_mask <- filter(dataset, test=="uniformity" & mask=="masked")
+# d_unif_unmask <- filter(dataset, test=="uniformity" & mask=="unmasked")
+# 
+# write.table(d_assoc_mask, "dataset_assoc_masked.csv", sep=",", col.names = NA)
+# write.table(d_assoc_unmask, "dataset_assoc_unmasked.csv", sep=",", col.names = NA)
+# write.table(d_unif_mask, "dataset_unif_masked.csv", sep=",", col.names = NA)
+# write.table(d_unif_unmask, "dataset_unif_unmasked.csv", sep=",", col.names = NA)
+# 
+# # Only get aggregate/averaged data (both runs of CueReact)
+# d_assoc_mask_agg <- filter(d_assoc_mask, session=="all")
+# d_assoc_unmask_agg <- filter(d_assoc_unmask, session=="all")
+# d_unif_mask_agg <- filter(d_unif_mask, session=="all")
+# d_unif_unmask_agg <- filter(d_unif_unmask, session=="all")
+# 
+# write.table(d_assoc_mask_agg, "dataset_assoc_masked_AGG.csv", sep=",", col.names = NA)
+# write.table(d_assoc_unmask_agg, "dataset_assoc_unmasked_AGG.csv", sep=",", col.names = NA)
+# write.table(d_unif_mask_agg, "dataset_unif_masked_AGG.csv", sep=",", col.names = NA)
+# write.table(d_unif_unmask_agg, "dataset_unif_unmasked_AGG.csv", sep=",", col.names = NA)
 
 
 
