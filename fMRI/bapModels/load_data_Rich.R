@@ -52,12 +52,14 @@ betas = betas_temp %>%
                     ifelse(con %in% nature_cons, "nature",
                     ifelse(con %in% social_cons, "social",
                     ifelse(con %in% food_cons, "food", NA)))))),
-         control = ifelse(con %in% sprintf("con_%04d.nii", c(19:30)), "nature", "rest"),
-         session = ifelse(con %in% sprintf("con_%04d.nii", seq(1,30,3)), "1",
+        control = ifelse(con %in% sprintf("con_%04d.nii", c(19:30)), "nature", "rest"),
+        session = ifelse(con %in% sprintf("con_%04d.nii", seq(1,30,3)), "1",
                    ifelse(con %in% sprintf("con_%04d.nii", seq(2,30,3)), "2", "all")),
         process = ifelse(grepl("VS|OFC", roi), "reward",
                   ifelse(grepl("vmPFC", roi), "value", "cognitive_control"))) %>%
-  select(subjectID, session, con, condition, control, xyz, roi, process, meanPE, sdPE)
+  group_by(session, roi) %>%
+  mutate(meanPEstd = scale(meanPE, center = TRUE, scale = TRUE)) %>%
+  select(subjectID, session, con, condition, control, xyz, roi, process, meanPE, meanPEstd, sdPE)
 
 # load dot products
 file_dir = "../multivariate/expression_maps/dotProducts"

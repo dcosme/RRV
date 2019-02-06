@@ -17,7 +17,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
 ```
 
 # load packages
@@ -60,36 +60,58 @@ dataset.ex %>%
 ```
 
 ## correlations food
-```{r, fig.width=8}
-dataset.ex %>%
+```{r, fig.width=8, fig.height=6}
+corr.plot = dataset.ex %>%
   filter(mask == "masked" & session == "all" & test == "association" & control == "nature" & condition == "food") %>%
   select(-c(xyz, roi, meanPE, sdPE)) %>%
   unique() %>%
   gather(outcome, value, bmi, fat, contains("_g")) %>%
   filter(outcome %in% c("snack_total_g", "bmi", "fat")) %>%
+  mutate(outcome = ifelse(outcome == "snack_total_g", "snack consumption",
+                   ifelse(outcome == "bmi", "BMI", "adiposity")),
+         process = ifelse(process == "cognitive_control", "cognitive control", process)) %>%
   ggplot(aes(dotProduct, value, color = outcome)) +
-    geom_point(alpha = .1) +
-    geom_smooth(method = "lm", alpha = .05) +
+    geom_point(alpha = .5) +
+    geom_smooth(method = "lm", alpha = .12) +
     facet_wrap(~process, scales = "free", nrow = 1) + 
-    theme_minimal(base_size = 10) +
-    theme(axis.line = element_line(colour = "black"),
+    scale_color_manual(name = "", values = c("#9f81c3", "#6699cc", "#00147F")) +
+    labs(y = "outcome value\n", x = "\ncorrespondence score") +
+    theme_minimal(base_size = 14) +
+    theme(text=element_text(family = "Optima"),
+          axis.line = element_line(colour = "black"),
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          legend.position = c(.9, .12),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
           panel.border = element_blank(),
           panel.background = element_blank())
+
+corr.plot
+ggsave(corr.plot, filename = "corr_plot.png", width = 10, height = 6, dpi = 300)
 ```
 
 # run models
+## tidy data for modeling
 ```{r}
 modeling.data = dataset.ex %>%
   filter(mask == "masked" & session == "all" & test == "association" & control == "nature" & condition == "food") %>%
-  select(-c(xyz, roi, meanPE, sdPE, map)) %>%
   unique() %>%
-  spread(process, dotProduct)
+  group_by(process, subjectID) %>%
+  mutate(meanProcessPEstd = mean(meanPEstd, na.rm = TRUE),
+         processPE = paste0(process, "PE")) %>%
+  select(-c(xyz, meanPE, meanPEstd, sdPE, map)) %>%
+  spread(process, dotProduct) %>%
+  spread(processPE, meanProcessPEstd) %>%
+  group_by(subjectID) %>%
+  fill(everything(), .direction = "down") %>%
+  fill(everything(), .direction = "up") %>%
+  slice(1) %>%
+  select(-cravingPE)
 
 ```
 
 ## snack total
+### pattern expression
 ```{r}
 snack.0 = lm(snack_total_g ~ 1, data = modeling.data)
 snack.1 = lm(snack_total_g ~ cognitive_control, data = modeling.data)
@@ -102,9 +124,34 @@ snack.7 = lm(snack_total_g ~ cognitive_control + craving + value, data = modelin
 
 AIC(snack.0, snack.1, snack.2, snack.3, snack.4, snack.5, snack.6, snack.7)
 summary(snack.1)
+confint(snack.1)
+```
+
+### rois
+```{r}
+snack.roi.0 = lm(snack_total_g ~ 1, data = modeling.data)
+snack.roi.1 = lm(snack_total_g ~ cognitive_controlPE, data = modeling.data)
+snack.roi.2 = lm(snack_total_g ~ rewardPE, data = modeling.data) 
+snack.roi.3 = lm(snack_total_g ~ valuePE, data = modeling.data) 
+snack.roi.4 = lm(snack_total_g ~ cognitive_controlPE + rewardPE, data = modeling.data) 
+snack.roi.5 = lm(snack_total_g ~ cognitive_controlPE + valuePE, data = modeling.data) 
+snack.roi.6 = lm(snack_total_g ~ rewardPE + valuePE, data = modeling.data) 
+snack.roi.7 = lm(snack_total_g ~ cognitive_controlPE + rewardPE + valuePE, data = modeling.data) 
+
+AIC(snack.roi.0, snack.roi.1, snack.roi.2, snack.roi.3, snack.roi.4, snack.roi.5, snack.roi.6, snack.roi.7)
+summary(snack.roi.1)
+```
+
+### combined
+```{r}
+snack.comb = lm(snack_total_g ~ cognitive_control + cognitive_controlPE, data = modeling.data)
+
+AIC(snack.0, snack.1, snack.roi.1, snack.comb)
+summary(snack.comb)
 ```
 
 ## bmi
+### pattern expression
 ```{r}
 bmi.0 = lm(bmi ~ 1, data = modeling.data)
 bmi.1 = lm(bmi ~ cognitive_control, data = modeling.data)
@@ -119,7 +166,22 @@ AIC(bmi.0, bmi.1, bmi.2, bmi.3, bmi.4, bmi.5, bmi.6, bmi.7)
 summary(bmi.0)
 ```
 
+### rois
+```{r}
+bmi.roi.0 = lm(bmi ~ 1, data = modeling.data)
+bmi.roi.1 = lm(bmi ~ cognitive_controlPE, data = modeling.data)
+bmi.roi.2 = lm(bmi ~ rewardPE, data = modeling.data) 
+bmi.roi.3 = lm(bmi ~ valuePE, data = modeling.data) 
+bmi.roi.4 = lm(bmi ~ cognitive_controlPE + rewardPE, data = modeling.data) 
+bmi.roi.5 = lm(bmi ~ cognitive_controlPE + valuePE, data = modeling.data) 
+bmi.roi.6 = lm(bmi ~ rewardPE + valuePE, data = modeling.data) 
+bmi.roi.7 = lm(bmi ~ cognitive_controlPE + rewardPE + valuePE, data = modeling.data) 
+
+AIC(bmi.roi.0, bmi.roi.1, bmi.roi.2, bmi.roi.3, bmi.roi.4, bmi.roi.5, bmi.roi.6, bmi.roi.7)
+```
+
 ## fat
+### pattern expression
 ```{r}
 fat.0 = lm(fat ~ 1, data = modeling.data)
 fat.1 = lm(fat ~ cognitive_control, data = modeling.data)
@@ -132,4 +194,18 @@ fat.7 = lm(fat ~ cognitive_control + craving + value, data = modeling.data)
 
 AIC(fat.0, fat.1, fat.2, fat.3, fat.4, fat.5, fat.6, fat.7)
 summary(fat.0)
+```
+
+### rois
+```{r}
+fat.roi.0 = lm(fat ~ 1, data = modeling.data)
+fat.roi.1 = lm(fat ~ cognitive_controlPE, data = modeling.data)
+fat.roi.2 = lm(fat ~ rewardPE, data = modeling.data) 
+fat.roi.3 = lm(fat ~ valuePE, data = modeling.data) 
+fat.roi.4 = lm(fat ~ cognitive_controlPE + rewardPE, data = modeling.data) 
+fat.roi.5 = lm(fat ~ cognitive_controlPE + valuePE, data = modeling.data) 
+fat.roi.6 = lm(fat ~ rewardPE + valuePE, data = modeling.data) 
+fat.roi.7 = lm(fat ~ cognitive_controlPE + rewardPE + valuePE, data = modeling.data) 
+
+AIC(fat.roi.0, fat.roi.1, fat.roi.2, fat.roi.3, fat.roi.4, fat.roi.5, fat.roi.6, fat.roi.7)
 ```
