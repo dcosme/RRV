@@ -6,17 +6,16 @@
 #
 # Set your directories
 
-freesurferlicense=/projects/dsnlab/dcosme/freesurfer_license.txt
-group_dir=/projects/dsnlab/dcosme/ #set path to directory within which study folder lives
-container=/projects/dsnlab/shared/BIDS/SingularityContainers/fmriprep-latest-2018-09-05.simg #relative to group_dir
 study=RRV
-study_dir="${group_dir}""${study}"
+freesurferlicense=/projects/"${study}"/shared/containers/license.txt
+group_dir=/projects/"${study}"/shared #set path to directory within which study folder lives
+container="${group_dir}"/containers/fmriprep-latest-2018-09-05.simg
+study_dir="${group_dir}"/"${study}"
 output_dir="${study_dir}"/RRV_scripts/fMRI/ppc/output
 
 if [ ! -d "${output_dir}" ]; then
     mkdir -v "${output_dir}"
 fi
-
 
 # Set subject list
 subject_list=`cat subject_list.txt` 
@@ -24,17 +23,18 @@ subject_list=`cat subject_list.txt`
 # Loop through subjects and run job_mriqc
 for subject in $subject_list; do
 
-subid=`echo $subject|awk '{print $1}' FS=","`
-sessid=`echo $subject|awk '{print $2}' FS=","`
-  
-sbatch --export ALL,subid=${subid},sessid=${sessid},group_dir=${group_dir},study_dir=${study_dir},study=${study},container=${container},freesurferlicense=${freesurferlicense} \
-	--job-name fmriprep \
-	--partition=short \
-	--cpus-per-task=28 \
-	--mem=100G \
-	--time=20:00:00 \
-	-o "${output_dir}"/"${subid}"_"${sessid}"_fmriprep_output.txt \
-	-e "${output_dir}"/"${subid}"_"${sessid}"_fmriprep_error.txt \
-	job_fmriprep.sh
+	subid=`echo $subject|awk '{print $1}' FS=","`
+	sessid=`echo $subject|awk '{print $2}' FS=","`
+	  
+	sbatch --export ALL,subid=${subid},sessid=${sessid},group_dir=${group_dir},study_dir=${study_dir},study=${study},container=${container},freesurferlicense=${freesurferlicense} \
+		--job-name fmriprep \
+		--partition=short \
+		--cpus-per-task=28 \
+		--mem=100G \
+		--time=20:00:00 \
+		--account=sanlab \
+		-o "${output_dir}"/"${subid}"_"${sessid}"_fmriprep_output.txt \
+		-e "${output_dir}"/"${subid}"_"${sessid}"_fmriprep_error.txt \
+		job_fmriprep.sh
 	
 done

@@ -5,7 +5,7 @@
 # in the derivatives folder.
 
 # Set bids directories
-bids_dir="${group_dir}""${study}"/bids_data
+bids_dir="${study_dir}"/bids_data
 derivatives="${bids_dir}"/derivatives
 working_dir="${derivatives}"/working/
 image="${container}"
@@ -28,20 +28,25 @@ cd $bids_dir
 
 for task in ${tasks[@]}; do
 
-echo -e "\nStarting on: $task"
-echo -e "\n"
+	echo -e "\nStarting on: $task"
+	echo -e "\n"
 
-PYTHONPATH="" singularity run --bind "${group_dir}":"${group_dir}" $image $bids_dir $derivatives participant \
-	--participant_label $subid -t $task -w /tmp \
-	--output-space {template,T1w,fsnative} \
-	--use-syn-sdc \
-	--nthreads 1 \
-	--mem-mb 100000 \
-	--fs-license-file $freesurferlicense \
-	--ignore slicetiming
+	PYTHONPATH="" singularity run --bind "${group_dir}":"${group_dir}" $image $bids_dir $derivatives participant \
+		--participant_label $subid \
+		-t $task \
+		-w /tmp \
+		--output-space {template,T1w,fsnative} \
+		--use-syn-sdc \
+		--nthreads 1 \
+		--mem-mb 100000 \
+		--fs-license-file $freesurferlicense \
+		--ignore slicetiming
 
-echo -e "\n"
-echo -e "\ndone"
-echo -e "\n-----------------------"
+	echo -e "\n"
+	echo -e "\ndone"
+	echo -e "\n-----------------------"
 
 done
+
+# Clean tmp folder
+/usr/bin/rm -rvf /tmp/fmriprep*
