@@ -5,41 +5,19 @@
 
 # user inpu: define paths
 #------------------------------------------
-rrv_dir=~/Desktop/RRV
-raw_dir=~/Desktop/RRV/raw
-bids_dir=~/Desktop/RRV/bids_data
-key_dir=~/Documents/code/sanlab/RRV_scripts/org/key
+raw_dir=/projects/dsnlab/dcosme/RRV/raw
+bids_dir=/projects/dsnlab/dcosme/RRV/bids_data
 
 # change directories to raw_dir
 #------------------------------------------
-cd $rrv_dir
-ls -d * > dirs.txt
-dirs=`cat dirs.txt`
-
-# make raw_dir
-#------------------------------------------
-mkdir $raw_dir
-
-# append study name to subject IDs and move to raw_dir
-#------------------------------------------
-for i in $dirs; do
-	cd $i
-	for j in $(ls); do
-		mv $j "${raw_dir}"/"${i}"_"${j}"
-	done
-	cd $rrv_dir
-	rm -R $i
-done
+cd $raw_dir
 
 # rename directories to e.g. RRV001
 #------------------------------------------
-cd $raw_dir
-
 a=1
 for i in $(ls); do 
 	new=$(printf "RRV%03d" "$a")
 	mv -i -- $i $new
-	echo "$i,$new" >> "${key_dir}"/key.csv
 	let a=a+1
 done
 
@@ -48,12 +26,6 @@ done
 for i in $(ls); do
 	mkdir -pv "${bids_dir}"/sub-"${i}"/ses-wave1/anat
 	mkdir -pv "${bids_dir}"/sub-"${i}"/ses-wave1/func
-done
-
-# gzip nifti files
-#------------------------------------------
-for i in $(ls); do
-	gzip $i/*.nii
 done
 
 # move and rename files to bids_data
