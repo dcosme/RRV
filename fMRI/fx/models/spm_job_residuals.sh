@@ -28,19 +28,37 @@ echo ---------------------------------------------------------------------------
 module load matlab
 matlab -nosplash -nodisplay -nodesktop ${ADDITIONALOPTIONS} -r "clear; addpath('$SPM_PATH'); spm_jobman('initcfg'); sub='$SUB'; script_file='$SCRIPT'; replacesid='$REPLACESID'; run('make_sid_matlabbatch.m'); spm_jobman('run',matlabbatch); exit"
 
+# specify residuals
+echo -------------------------------------------------------------------------------
+echo "Specifying residuals"
+echo -------------------------------------------------------------------------------
+module load afni
+sub_bids_dir=/projects/${LAB}/shared/${STUDY}/bids_data/sub-${STUDY}${SUB}/${SES}/func
+RUNS=$(ls ${sub_bids_dir}/*${TASK}*.nii.gz | wc -l)
+start=1
+stop=0
+
+for i in $(seq 1 $RUNS); do 
+	file=${sub_bids_dir}/sub-${STUDY}${SUB}_${SES}_task-${TASK}_acq-${i}_bold.nii.gz
+	nvols=`3dinfo -nv ${file}`
+	stop=$(($stop + $nvols))
+	for j in $(seq $start $stop); do 
+		printf "Res_%04d.nii\n" $j >> ${RES_DIR}/residuals_run${i}.txt 
+	done
+	start=$(($start + $nvols))
+done
+
 # merge residual files
 echo -------------------------------------------------------------------------------
 echo "Merging residuals"
 echo -------------------------------------------------------------------------------
 
 module load fsl
-script_dir=$(pwd)
-RUNS=$(ls residuals*.txt | wc -l)
 cd ${RES_DIR}
 
 for i in $(seq 1 $RUNS)
 	do echo "merging residuals for run${i}"
-	residual_files=`cat ${script_dir}/residuals_run${i}.txt`
+	residual_files=`cat ${RES_DIR}/residuals_run${i}.txt`
 	fslmerge -t residuals_run${i} ${residual_files}
 	rm ${residual_files}
 done
@@ -50,7 +68,6 @@ echo ---------------------------------------------------------------------------
 echo "Calculating ACF parameters"
 echo -------------------------------------------------------------------------------
 
-module load afni
 for i in $(seq 1 $RUNS)
 	do echo "calculating ACF parameters for run${i}"
 	3dFWHMx -acf -mask mask.nii residuals_run${i}.nii.gz >> ACFparameters.1D

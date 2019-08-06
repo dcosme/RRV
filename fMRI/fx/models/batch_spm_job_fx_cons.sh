@@ -7,21 +7,27 @@
 # D.Cos 2018.11.06
 #--------------------------------------------------------------
 
+# Set the lab
+LAB=sanlab
 
 # Set your study
 STUDY=RRV
 
+# Set task name and session pattern
+TASK=CR
+SES=ses-wave1
+
 # Set subject list
-SUBJLIST=`cat subject_list.txt`
+SUBJLIST=`cat test_subject_list.txt`
 
 # Which SID should be replaced?
 REPLACESID=001
 
 # SPM Path
-SPM_PATH=/projects/dsnlab/shared/SPM12
+SPM_PATH=/projects/sanlab/shared/spm12
 
 # Set scripts directory path
-SCRIPTS_DIR=/projects/dsnlab/dcosme/${STUDY}/${STUDY}_scripts
+SCRIPTS_DIR=/projects/sanlab/shared/${STUDY}/${STUDY}_scripts
 
 # Set MATLAB script path
 SCRIPT=${SCRIPTS_DIR}/fMRI/fx/models/fx_event_cons.m
@@ -39,15 +45,8 @@ if [ ! -d ${OUTPUTDIR} ]; then
 	mkdir -p ${OUTPUTDIR}
 fi
 
-# N runs for residual calculation
-RUNS=(1 2)
-
 # model output directory
-MODEL_DIR=/projects/dsnlab/dcosme/RRV/nonbids_data/fMRI/fx/models/event
-
-# Make text file with residual files for each run
-echo $(printf "Res_%04d.nii\n" {1..250}) > residuals_run1.txt
-echo $(printf "Res_%04d.nii\n" {251..500}) > residuals_run2.txt
+MODEL_DIR=/projects/sanlab/shared/RRV/nonbids_data/fMRI/fx/models/event
 
 # Set job parameters
 cpuspertask=1
@@ -58,11 +57,12 @@ for SUB in $SUBJLIST; do
 
 	RES_DIR=${MODEL_DIR}/sub-${STUDY}${SUB}
 
-	sbatch --export ALL,REPLACESID=$REPLACESID,SCRIPT=$SCRIPT,SUB=$SUB,SPM_PATH=$SPM_PATH,RES_DIR=$RES_DIR  \
+	sbatch --export ALL,REPLACESID=$REPLACESID,LAB=$LAB,STUDY=$STUDY,TASK=$TASK,SES=$SES,SCRIPT=$SCRIPT,SUB=$SUB,SPM_PATH=$SPM_PATH,RES_DIR=$RES_DIR  \
 		--job-name=${RESULTS_INFIX} \
 	 	-o ${OUTPUTDIR}/${SUB}_${RESULTS_INFIX}.log \
 	 	--cpus-per-task=${cpuspertask} \
 	 	--mem-per-cpu=${mempercpu} \
+	 	--account=sanlab \
 	 	${SHELL_SCRIPT}
 		sleep .25
 done

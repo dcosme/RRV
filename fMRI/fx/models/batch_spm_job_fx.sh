@@ -6,7 +6,7 @@
 #--------------------------------------------------------------
 
 # Set your study
-STUDY=/projects/dsnlab/dcosme/RRV/RRV_scripts
+STUDY=/projects/sanlab/shared/RRV/RRV_scripts
 
 # Set subject list
 SUBJLIST=`cat subject_list.txt`
@@ -15,7 +15,7 @@ SUBJLIST=`cat subject_list.txt`
 REPLACESID=001
 
 # SPM Path
-SPM_PATH=/projects/dsnlab/shared/SPM12
+SPM_PATH=/projects/sanlab/shared/SPM12
 
 # Set MATLAB script path
 SCRIPT=${STUDY}/fMRI/fx/models/fx_event.m
@@ -44,6 +44,7 @@ for SUB in $SUBJLIST; do
 		 	-o ${OUTPUTDIR}/${SUB}_${RESULTS_INFIX}.log \
 		 	--cpus-per-task=${cpuspertask} \
 		 	--mem-per-cpu=${mempercpu} \
+		 	--account=sanlab \
 		 	${SHELL_SCRIPT}
 	 	sleep .25
 done
