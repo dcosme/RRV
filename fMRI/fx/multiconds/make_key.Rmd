@@ -1,0 +1,54 @@
+---
+title: "make key"
+author: "Dani Cosme"
+date: "8/6/2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+# load packages
+```{r}
+library(tidyverse)
+```
+
+# load and tidy data
+```{r}
+key = read.csv("../../../org/key/key.csv", header = FALSE, stringsAsFactors = FALSE) %>%
+  rename("combined" = V1,
+         "rrv_id" = V2) %>%
+  extract(combined, c("year","study", "id"), "([0-9]{4})_(.*)_([0-9]{2}.*)", remove = FALSE)
+
+ipro_order1 = read.csv("onset_text_files/sublist_IPRO_ORDER1.txt", header = FALSE) %>%
+  rename("id" = V1) %>%
+  mutate(list = "ipro_order1")
+ipro_order2 = read.csv("onset_text_files/sublist_IPRO_ORDER2.txt", header = FALSE) %>%
+  rename("id" = V1) %>%
+  mutate(list = "ipro_order2")
+onerun_vers1 = read.csv("onset_text_files/sublist_1RUN_vers1.txt", header = FALSE) %>%
+  rename("id" = V1) %>%
+  mutate(list = "single_vers1")
+onerun_vers2 = read.csv("onset_text_files/sublist_1RUN_vers2.txt", header = FALSE) %>%
+  rename("id" = V1) %>%
+  mutate(list = "single_vers2")
+tworuns_order1 = read.csv("onset_text_files/sublist_new_ORDER1.txt", header = FALSE) %>%
+  rename("id" = V1) %>%
+  mutate(list = "order1")
+tworuns_order2 = read.csv("onset_text_files/sublist_new_ORDER2.txt", header = FALSE) %>%
+  rename("id" = V1) %>%
+  mutate(list = "order2")
+
+lists = bind_rows(ipro_order1, ipro_order2, onerun_vers1, onerun_vers2, tworuns_order1, tworuns_order2)
+
+merged = key %>%
+  left_join(., lists, by = "id") %>%
+  select(id, rrv_id, list, everything())
+```
+
+# write
+```{r}
+write.table(merged, "subjectID_key.csv", row.names = FALSE, col.names = FALSE, sep = ",", quote = FALSE)
+```
+
