@@ -22,10 +22,10 @@
 # * figDPI = plot resolution in dots per inch
 
 # paths
-confoundDir = '/projects/dsnlab/dcosme/RRV/bids_data/derivatives/fmriprep'
-summaryDir = '/projects/dsnlab/dcosme/RRV/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/summary'
-plotDir = '/projects/dsnlab/dcosme/RRV/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/plots'
-rpDir = '/projects/dsnlab/dcosme/RRV/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/rp_txt'
+confoundDir = '/projects/sanlab/shared/RRV/bids_data/derivatives/fmriprep'
+summaryDir = '/projects/sanlab/shared/RRV/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/summary'
+plotDir = '/projects/sanlab/shared/RRV/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/plots'
+rpDir = '/projects/sanlab/shared/RRV/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/rp_txt'
 
 # variables
 # please note the expected BIDS file pattern is e.g. sub-[TAG001]_ses-[wave1]_task-[DSD]_run-[01]_bold_confounds.tsv
@@ -35,7 +35,7 @@ subPattern = 'sub-(.*[0-9]{3})'
 wavePattern = 'ses-wave([0-9]{1})' # just extract the number
 taskPattern = 'task-(CR)'
 runPattern = 'acq-([0-9]{1})'
-subsToIgnore = 'RRV042'
+subsToIgnore = 'RRV165'
 writeRP = TRUE
 writePlot = TRUE
 writeEuclidean = TRUE
