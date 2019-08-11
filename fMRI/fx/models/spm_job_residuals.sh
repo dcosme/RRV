@@ -34,11 +34,19 @@ echo "Specifying residuals"
 echo -------------------------------------------------------------------------------
 module load afni
 sub_bids_dir=/projects/${LAB}/shared/${STUDY}/bids_data/sub-${STUDY}${SUB}/${SES}/func
-RUNS=$(ls ${sub_bids_dir}/*${TASK}*.nii.gz | wc -l)
 start=1
 stop=0
 
-for i in $(seq 1 $RUNS); do 
+# modify run assignment if necessary
+if [ ${MOD} == run1 ]; then
+	runs=2
+elif [ ${MOD} == run2 ]; then
+	runs=1
+else
+	runs=$(seq 1 $(ls ${sub_bids_dir}/*${TASK}*.nii.gz | wc -l))
+fi
+
+for i in $runs; do 
 	file=${sub_bids_dir}/sub-${STUDY}${SUB}_${SES}_task-${TASK}_acq-${i}_bold.nii.gz
 	nvols=`3dinfo -nv ${file}`
 	stop=$(($stop + $nvols))
@@ -56,8 +64,8 @@ echo ---------------------------------------------------------------------------
 module load fsl
 cd ${RES_DIR}
 
-for i in $(seq 1 $RUNS)
-	do echo "merging residuals for run${i}"
+for i in $runs; do 
+	echo "merging residuals for run${i}"
 	residual_files=`cat ${RES_DIR}/residuals_run${i}.txt`
 	fslmerge -t residuals_run${i} ${residual_files}
 	rm ${residual_files}
@@ -68,8 +76,8 @@ echo ---------------------------------------------------------------------------
 echo "Calculating ACF parameters"
 echo -------------------------------------------------------------------------------
 
-for i in $(seq 1 $RUNS)
-	do echo "calculating ACF parameters for run${i}"
+for i in $runs; do
+	echo "calculating ACF parameters for run${i}"
 	3dFWHMx -acf -mask mask.nii residuals_run${i}.nii.gz >> ACFparameters.1D
 done
 

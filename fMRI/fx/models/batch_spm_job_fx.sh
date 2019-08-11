@@ -9,7 +9,7 @@
 STUDY=/projects/sanlab/shared/RRV/RRV_scripts
 
 # Set subject list
-SUBJLIST=`cat subject_list.txt`
+SUBJLIST=`cat test_subject_list.txt`
 
 # Which SID should be replaced?
 REPLACESID=001

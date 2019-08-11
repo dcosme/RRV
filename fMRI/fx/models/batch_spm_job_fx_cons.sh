@@ -20,14 +20,17 @@ SES=ses-wave1
 # Set subject list
 SUBJLIST=`cat test_subject_list.txt`
 
+# Set which runs are missing (e.g. run1) for this subject list (e.g., missing_run1_subject_list.txt); if none set to FALSE
+MOD=run2
+
 # Which SID should be replaced?
 REPLACESID=001
 
 # SPM Path
-SPM_PATH=/projects/sanlab/shared/spm12
+SPM_PATH=/projects/${LAB}/shared/spm12
 
 # Set scripts directory path
-SCRIPTS_DIR=/projects/sanlab/shared/${STUDY}/${STUDY}_scripts
+SCRIPTS_DIR=/projects/${LAB}/shared/${STUDY}/${STUDY}_scripts
 
 # Set MATLAB script path
 SCRIPT=${SCRIPTS_DIR}/fMRI/fx/models/fx_event_cons.m
