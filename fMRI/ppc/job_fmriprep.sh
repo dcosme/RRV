@@ -34,7 +34,7 @@ for task in ${tasks[@]}; do
 	PYTHONPATH="" singularity run --bind "${group_dir}":"${group_dir}" $image $bids_dir $derivatives participant \
 		--participant_label $subid \
 		-t $task \
-		-w /tmp \
+		-w $working_dir \
 		--output-space {template,T1w,fsnative} \
 		--use-syn-sdc \
 		--nthreads 1 \

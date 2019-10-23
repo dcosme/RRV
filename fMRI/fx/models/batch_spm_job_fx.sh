@@ -15,7 +15,7 @@ SUBJLIST=`cat test_subject_list.txt`
 REPLACESID=001
 
 # SPM Path
-SPM_PATH=/projects/sanlab/shared/SPM12
+SPM_PATH=/projects/sanlab/shared/spm12
 
 # Set MATLAB script path
 SCRIPT=${STUDY}/fMRI/fx/models/fx_event.m
