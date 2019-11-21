@@ -36,7 +36,7 @@ for SUB in $SUBJLIST; do
 	 	--cpus-per-task=${cpuspertask} \
 	 	--mem-per-cpu=${mempercpu} \
 	 	--account=sanlab \
-	 	--partition=ctn \
+	 	--partition=short \
 	 	${SHELL_SCRIPT}
  	sleep .25
 done
