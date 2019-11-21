@@ -7,8 +7,8 @@
 # Set your directories
 
 study=RRV
-freesurferlicense=/projects/"${study}"/shared/containers/license.txt
-group_dir=/projects/"${study}"/shared #set path to directory within which study folder lives
+freesurferlicense=/projects/sanlab/shared/containers/license.txt
+group_dir=/projects/sanlab/shared #set path to directory within which study folder lives
 container="${group_dir}"/containers/fmriprep-latest-2018-09-05.simg
 study_dir="${group_dir}"/"${study}"
 output_dir="${study_dir}"/RRV_scripts/fMRI/ppc/output
@@ -18,7 +18,7 @@ if [ ! -d "${output_dir}" ]; then
 fi
 
 # Set subject list
-subject_list=`cat subject_list.txt` 
+subject_list=`cat test_subject_list.txt` 
 
 # Loop through subjects and run job_mriqc
 for subject in $subject_list; do
@@ -31,7 +31,7 @@ for subject in $subject_list; do
 		--partition=short \
 		--cpus-per-task=28 \
 		--mem=100G \
-		--time=20:00:00 \
+		--time=24:00:00 \
 		--account=sanlab \
 		-o "${output_dir}"/"${subid}"_"${sessid}"_fmriprep_output.txt \
 		-e "${output_dir}"/"${subid}"_"${sessid}"_fmriprep_error.txt \

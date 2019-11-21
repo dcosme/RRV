@@ -9,7 +9,7 @@
 STUDY=/projects/sanlab/shared/RRV/RRV_scripts
 
 # Set subject list
-SUBJLIST=`cat subject_list.txt`
+SUBJLIST=`cat test_subject_list.txt`
 
 # Which SID should be replaced?
 REPLACESID=RRV001
@@ -18,7 +18,7 @@ REPLACESID=RRV001
 SPM_PATH=/projects/sanlab/shared/spm12
 
 # Set MATLAB script path
-SCRIPT=${STUDY}/fMRI/ppc/smooth/smooth.m
+SCRIPT=${STUDY}/fMRI/ppc/smooth/smooth_single.m
 
 # Set shell script to execute
 SHELL_SCRIPT=spm_job.sh
