@@ -32,5 +32,5 @@ fi
 for con in ${cons[@]}; do 
 	while read roi; do 
 		echo "${SUB}" "${con}" "${roi}" `3dmaskave -sigma -quiet -nball $(echo "${roi}") $(echo "${radius}") "${con_dir}"/"${con}"` >> "${output_dir}"/"${SUB}"_parameterEstimates.txt
-	done
+	done <rois.txt
 done
