@@ -20,8 +20,8 @@ cons=`echo $(printf "con_%04d.nii\n" {1..30})` #contrasts to extract parameter e
 radius=6 #mm sphere
 
 # paths
-con_dir=/projects/dsnlab/dcosme/RRV/nonbids_data/fMRI/fx/models/event/sub-"${SUB}" #con directory
-output_dir=/projects/dsnlab/dcosme/RRV/RRV_scripts/fMRI/roi/parameterEstimates #parameter estimate output directory
+con_dir=/projects/sanlab/shared/RRV/nonbids_data/fMRI/fx/models/event/sub-"${SUB}" #con directory
+output_dir=/projects/sanlab/shared/RRV/RRV_scripts/fMRI/roi/parameterEstimates #parameter estimate output directory
 
 if [ ! -d ${output_dir} ]; then
 	mkdir -p ${output_dir}
@@ -32,5 +32,5 @@ fi
 for con in ${cons[@]}; do 
 	while read roi; do 
 		echo "${SUB}" "${con}" "${roi}" `3dmaskave -sigma -quiet -nball $(echo "${roi}") $(echo "${radius}") "${con_dir}"/"${con}"` >> "${output_dir}"/"${SUB}"_parameterEstimates.txt
-	done <rois.txt
+	done
 done

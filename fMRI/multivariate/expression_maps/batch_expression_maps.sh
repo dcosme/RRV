@@ -6,7 +6,7 @@
 #--------------------------------------------------------------
 
 # Set your study
-STUDY=/projects/dsnlab/dcosme/RRV/RRV_scripts
+STUDY=/projects/sanlab/shared/RRV/RRV_scripts
 
 # Set subject list
 SUBJLIST=`cat subject_list.txt`
@@ -35,6 +35,8 @@ for SUB in $SUBJLIST; do
 	 	-o ${OUTPUTDIR}/${SUB}_${RESULTS_INFIX}.log \
 	 	--cpus-per-task=${cpuspertask} \
 	 	--mem-per-cpu=${mempercpu} \
+	 	--account=sanlab \
+	 	--partition=ctn \
 	 	${SHELL_SCRIPT}
  	sleep .25
 done
