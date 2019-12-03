@@ -79,7 +79,7 @@ if (file.exists("fat_dots_rest_assoc_sca.RDS")) {
     select(-fat) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_rest_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)
@@ -102,7 +102,7 @@ if (file.exists("fat_dots_rest_uniform_sca.RDS")) {
     select(-fat) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_rest_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)
@@ -125,7 +125,7 @@ if (file.exists("fat_dots_nature_assoc_sca.RDS")) {
     select(-fat) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_nature_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)
@@ -148,7 +148,7 @@ if (file.exists("fat_dots_nature_uniform_sca.RDS")) {
     select(-fat) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_nature_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)
