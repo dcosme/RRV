@@ -68,7 +68,7 @@ dots_nature_uniform = dots_sca %>%
 options(na.action = "na.fail")
 
 # specify number of cores
-n_cores = 7
+n_cores = 28
 
 ## % fat
 # dots association > rest
