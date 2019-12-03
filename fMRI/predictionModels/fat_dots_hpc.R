@@ -8,13 +8,13 @@ source("load_data.R")
 betas_std = betas %>%
   group_by(roi, session) %>%
   mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
-         meanPE = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
+         meanPE_std = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
   ungroup()
 
 dots_std = dots %>%
   group_by(map, test, mask, session) %>%
   mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
-         dotProduct = ifelse(dotProduct_std > 3 | dotProduct_std < -3, 9999, dotProduct_std)) %>%
+         dotProduct_std = ifelse(dotProduct_std > 3 | dotProduct_std < -3, NA, dotProduct_std)) %>%
   ungroup()
 
 # join data frames
@@ -76,7 +76,7 @@ if (file.exists("fat_dots_rest_assoc_sca.RDS")) {
   dots_rest_assoc_sca = readRDS("fat_dots_rest_assoc_sca.RDS")
 } else {
   data = dots_rest_assoc %>%
-    select(-fat) %>%
+    select(-bmi) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_rest_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
@@ -99,7 +99,7 @@ if (file.exists("fat_dots_rest_uniform_sca.RDS")) {
   dots_rest_uniform_sca = readRDS("fat_dots_rest_uniform_sca.RDS")
 } else {
   data = dots_rest_uniform %>%
-    select(-fat) %>%
+    select(-bmi) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_rest_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
@@ -122,7 +122,7 @@ if (file.exists("fat_dots_nature_assoc_sca.RDS")) {
   dots_nature_assoc_sca = readRDS("fat_dots_nature_assoc_sca.RDS")
 } else {
   data = dots_nature_assoc %>%
-    select(-fat) %>%
+    select(-bmi) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_nature_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
@@ -145,7 +145,7 @@ if (file.exists("fat_dots_nature_uniform_sca.RDS")) {
   dots_nature_uniform_sca = readRDS("fat_dots_nature_uniform_sca.RDS")
 } else {
   data = dots_nature_uniform %>%
-    select(-fat) %>%
+    select(-bmi) %>%
     na.omit()
   lm_predictors = paste(names(select(dots_nature_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))

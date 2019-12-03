@@ -8,13 +8,13 @@ source("load_data.R")
 betas_std = betas %>%
   group_by(roi, session) %>%
   mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
-         meanPE = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
+         meanPE_std = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
   ungroup()
 
 dots_std = dots %>%
   group_by(map, test, mask, session) %>%
   mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
-         dotProduct = ifelse(dotProduct_std > 3 | dotProduct_std < -3, 9999, dotProduct_std)) %>%
+         dotProduct_std = ifelse(dotProduct_std > 3 | dotProduct_std < -3, NA, dotProduct_std)) %>%
   ungroup()
 
 # join data frames
