@@ -1,0 +1,594 @@
+RRV206 craving_regulation_neuralsig con_0001.nii unmasked -0.782266
+RRV206 craving_regulation_neuralsig con_0001.nii masked 5.97748
+RRV206 craving_regulation_neuralsig con_0002.nii unmasked -1.71192
+RRV206 craving_regulation_neuralsig con_0002.nii masked 4.10596
+RRV206 craving_regulation_neuralsig con_0003.nii unmasked -2.38821
+RRV206 craving_regulation_neuralsig con_0003.nii masked 5.3142
+RRV206 craving_regulation_neuralsig con_0004.nii unmasked -4.86927
+RRV206 craving_regulation_neuralsig con_0004.nii masked 8.00911
+RRV206 craving_regulation_neuralsig con_0005.nii unmasked -3.67998
+RRV206 craving_regulation_neuralsig con_0005.nii masked 4.28439
+RRV206 craving_regulation_neuralsig con_0006.nii unmasked -1.62746
+RRV206 craving_regulation_neuralsig con_0006.nii masked 5.13255
+RRV206 craving_regulation_neuralsig con_0007.nii unmasked 4.087
+RRV206 craving_regulation_neuralsig con_0007.nii masked -2.03163
+RRV206 craving_regulation_neuralsig con_0008.nii unmasked 3.15735
+RRV206 craving_regulation_neuralsig con_0008.nii masked -3.90315
+RRV206 craving_regulation_neuralsig con_0009.nii unmasked 2.48106
+RRV206 craving_regulation_neuralsig con_0009.nii masked -2.69491
+RRV206 craving_regulation_neuralsig con_0010.nii unmasked 3.24181
+RRV206 craving_regulation_neuralsig con_0010.nii masked -2.87656
+RRV206 craving_regulation_neuralsig con_0011.nii unmasked 1.18929
+RRV206 craving_regulation_neuralsig con_0011.nii masked -3.72471
+RRV206 craving_regulation_neuralsig con_0012.nii unmasked
+RRV206 craving_regulation_neuralsig con_0012.nii masked
+RRV206 craving_regulation_neuralsig con_0013.nii unmasked
+RRV206 craving_regulation_neuralsig con_0013.nii masked
+RRV206 craving_regulation_neuralsig con_0014.nii unmasked
+RRV206 craving_regulation_neuralsig con_0014.nii masked
+RRV206 craving_regulation_neuralsig con_0015.nii unmasked
+RRV206 craving_regulation_neuralsig con_0015.nii masked
+RRV206 craving_regulation_neuralsig con_0016.nii unmasked
+RRV206 craving_regulation_neuralsig con_0016.nii masked
+RRV206 craving_regulation_neuralsig con_0017.nii unmasked
+RRV206 craving_regulation_neuralsig con_0017.nii masked
+RRV206 craving_regulation_neuralsig con_0018.nii unmasked
+RRV206 craving_regulation_neuralsig con_0018.nii masked
+RRV206 craving_regulation_neuralsig con_0019.nii unmasked
+RRV206 craving_regulation_neuralsig con_0019.nii masked
+RRV206 craving_regulation_neuralsig con_0020.nii unmasked
+RRV206 craving_regulation_neuralsig con_0020.nii masked
+RRV206 craving_regulation_neuralsig con_0021.nii unmasked
+RRV206 craving_regulation_neuralsig con_0021.nii masked
+RRV206 craving_regulation_neuralsig con_0022.nii unmasked
+RRV206 craving_regulation_neuralsig con_0022.nii masked
+RRV206 craving_regulation_neuralsig con_0023.nii unmasked
+RRV206 craving_regulation_neuralsig con_0023.nii masked
+RRV206 craving_regulation_neuralsig con_0024.nii unmasked
+RRV206 craving_regulation_neuralsig con_0024.nii masked
+RRV206 craving_regulation_neuralsig con_0025.nii unmasked
+RRV206 craving_regulation_neuralsig con_0025.nii masked
+RRV206 craving_regulation_neuralsig con_0026.nii unmasked
+RRV206 craving_regulation_neuralsig con_0026.nii masked
+RRV206 craving_regulation_neuralsig con_0027.nii unmasked
+RRV206 craving_regulation_neuralsig con_0027.nii masked
+RRV206 craving_regulation_neuralsig con_0028.nii unmasked
+RRV206 craving_regulation_neuralsig con_0028.nii masked
+RRV206 craving_regulation_neuralsig con_0029.nii unmasked
+RRV206 craving_regulation_neuralsig con_0029.nii masked
+RRV206 craving_regulation_neuralsig con_0030.nii unmasked
+RRV206 craving_regulation_neuralsig con_0030.nii masked
+RRV206 craving_regulation_neuralsig con_0031.nii unmasked
+RRV206 craving_regulation_neuralsig con_0031.nii masked
+RRV206 craving_regulation_neuralsig con_0032.nii unmasked
+RRV206 craving_regulation_neuralsig con_0032.nii masked
+RRV206 craving_regulation_neuralsig con_0033.nii unmasked
+RRV206 craving_regulation_neuralsig con_0033.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0001.nii unmasked 12897.4
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0001.nii masked 12863.9
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0002.nii unmasked 9750.9
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0002.nii masked 6374.97
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0003.nii unmasked 11208.8
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0003.nii masked 11295.1
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0004.nii unmasked -533.373
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0004.nii masked 3521.39
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0005.nii unmasked -3037.24
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0005.nii masked -544.93
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0006.nii unmasked 11285.7
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0006.nii masked 10178
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0007.nii unmasked 13430.8
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0007.nii masked 9342.56
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0008.nii unmasked 10284.3
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0008.nii masked 2853.58
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0009.nii unmasked 11742.2
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0009.nii masked 7773.68
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0010.nii unmasked 11819.1
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0010.nii masked 6656.61
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0011.nii unmasked -2503.87
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0011.nii masked -4066.32
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0012.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0013.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0014.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0015.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0016.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0017.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0018.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0019.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0020.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0021.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0022.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0023.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0024.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0025.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0026.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0027.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0028.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0029.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0030.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0031.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0032.nii masked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 reward_uniformity-test_z_FDR_0.01 con_0033.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0001.nii unmasked -966.25
+RRV206 reward_association-test_z_FDR_0.01 con_0001.nii masked -628.066
+RRV206 reward_association-test_z_FDR_0.01 con_0002.nii unmasked 657.541
+RRV206 reward_association-test_z_FDR_0.01 con_0002.nii masked 951.445
+RRV206 reward_association-test_z_FDR_0.01 con_0003.nii unmasked 272.903
+RRV206 reward_association-test_z_FDR_0.01 con_0003.nii masked 596.975
+RRV206 reward_association-test_z_FDR_0.01 con_0004.nii unmasked -2309.83
+RRV206 reward_association-test_z_FDR_0.01 con_0004.nii masked -1969.11
+RRV206 reward_association-test_z_FDR_0.01 con_0005.nii unmasked -2647.44
+RRV206 reward_association-test_z_FDR_0.01 con_0005.nii masked -2337.29
+RRV206 reward_association-test_z_FDR_0.01 con_0006.nii unmasked -11.935
+RRV206 reward_association-test_z_FDR_0.01 con_0006.nii masked 306.785
+RRV206 reward_association-test_z_FDR_0.01 con_0007.nii unmasked 1343.58
+RRV206 reward_association-test_z_FDR_0.01 con_0007.nii masked 1341.04
+RRV206 reward_association-test_z_FDR_0.01 con_0008.nii unmasked 2967.37
+RRV206 reward_association-test_z_FDR_0.01 con_0008.nii masked 2920.56
+RRV206 reward_association-test_z_FDR_0.01 con_0009.nii unmasked 2582.73
+RRV206 reward_association-test_z_FDR_0.01 con_0009.nii masked 2566.09
+RRV206 reward_association-test_z_FDR_0.01 con_0010.nii unmasked 2297.89
+RRV206 reward_association-test_z_FDR_0.01 con_0010.nii masked 2275.9
+RRV206 reward_association-test_z_FDR_0.01 con_0011.nii unmasked -337.611
+RRV206 reward_association-test_z_FDR_0.01 con_0011.nii masked -368.179
+RRV206 reward_association-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0012.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0013.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0014.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0015.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0016.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0017.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0018.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0019.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0020.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0021.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0022.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0023.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0024.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0025.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0026.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0027.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0028.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0029.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0030.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0031.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0032.nii masked
+RRV206 reward_association-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 reward_association-test_z_FDR_0.01 con_0033.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0001.nii unmasked 5243.43
+RRV206 value_uniformity-test_z_FDR_0.01 con_0001.nii masked 5243.43
+RRV206 value_uniformity-test_z_FDR_0.01 con_0002.nii unmasked 2703.09
+RRV206 value_uniformity-test_z_FDR_0.01 con_0002.nii masked 2703.09
+RRV206 value_uniformity-test_z_FDR_0.01 con_0003.nii unmasked 4910.09
+RRV206 value_uniformity-test_z_FDR_0.01 con_0003.nii masked 4910.09
+RRV206 value_uniformity-test_z_FDR_0.01 con_0004.nii unmasked 1004.82
+RRV206 value_uniformity-test_z_FDR_0.01 con_0004.nii masked 1004.82
+RRV206 value_uniformity-test_z_FDR_0.01 con_0005.nii unmasked -552.621
+RRV206 value_uniformity-test_z_FDR_0.01 con_0005.nii masked -552.621
+RRV206 value_uniformity-test_z_FDR_0.01 con_0006.nii unmasked 4285.54
+RRV206 value_uniformity-test_z_FDR_0.01 con_0006.nii masked 4285.54
+RRV206 value_uniformity-test_z_FDR_0.01 con_0007.nii unmasked 4238.61
+RRV206 value_uniformity-test_z_FDR_0.01 con_0007.nii masked 4238.61
+RRV206 value_uniformity-test_z_FDR_0.01 con_0008.nii unmasked 1698.27
+RRV206 value_uniformity-test_z_FDR_0.01 con_0008.nii masked 1698.27
+RRV206 value_uniformity-test_z_FDR_0.01 con_0009.nii unmasked 3905.27
+RRV206 value_uniformity-test_z_FDR_0.01 con_0009.nii masked 3905.27
+RRV206 value_uniformity-test_z_FDR_0.01 con_0010.nii unmasked 3280.71
+RRV206 value_uniformity-test_z_FDR_0.01 con_0010.nii masked 3280.71
+RRV206 value_uniformity-test_z_FDR_0.01 con_0011.nii unmasked -1557.45
+RRV206 value_uniformity-test_z_FDR_0.01 con_0011.nii masked -1557.45
+RRV206 value_uniformity-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0012.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0013.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0014.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0015.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0016.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0017.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0018.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0019.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0020.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0021.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0022.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0023.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0024.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0025.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0026.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0027.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0028.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0029.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0030.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0031.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0032.nii masked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 value_uniformity-test_z_FDR_0.01 con_0033.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0001.nii unmasked -835.034
+RRV206 value_association-test_z_FDR_0.01 con_0001.nii masked -835.034
+RRV206 value_association-test_z_FDR_0.01 con_0002.nii unmasked 56.0527
+RRV206 value_association-test_z_FDR_0.01 con_0002.nii masked 56.0527
+RRV206 value_association-test_z_FDR_0.01 con_0003.nii unmasked -404.18
+RRV206 value_association-test_z_FDR_0.01 con_0003.nii masked -404.18
+RRV206 value_association-test_z_FDR_0.01 con_0004.nii unmasked -1135.2
+RRV206 value_association-test_z_FDR_0.01 con_0004.nii masked -1135.2
+RRV206 value_association-test_z_FDR_0.01 con_0005.nii unmasked -943.065
+RRV206 value_association-test_z_FDR_0.01 con_0005.nii masked -943.065
+RRV206 value_association-test_z_FDR_0.01 con_0006.nii unmasked -394.387
+RRV206 value_association-test_z_FDR_0.01 con_0006.nii masked -394.387
+RRV206 value_association-test_z_FDR_0.01 con_0007.nii unmasked 300.165
+RRV206 value_association-test_z_FDR_0.01 con_0007.nii masked 300.165
+RRV206 value_association-test_z_FDR_0.01 con_0008.nii unmasked 1191.25
+RRV206 value_association-test_z_FDR_0.01 con_0008.nii masked 1191.25
+RRV206 value_association-test_z_FDR_0.01 con_0009.nii unmasked 731.019
+RRV206 value_association-test_z_FDR_0.01 con_0009.nii masked 731.019
+RRV206 value_association-test_z_FDR_0.01 con_0010.nii unmasked 740.812
+RRV206 value_association-test_z_FDR_0.01 con_0010.nii masked 740.812
+RRV206 value_association-test_z_FDR_0.01 con_0011.nii unmasked 192.135
+RRV206 value_association-test_z_FDR_0.01 con_0011.nii masked 192.135
+RRV206 value_association-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0012.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0013.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0014.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0015.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0016.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0017.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0018.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0019.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0020.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0021.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0022.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0023.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0024.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0025.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0026.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0027.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0028.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0029.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0030.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0031.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0032.nii masked
+RRV206 value_association-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 value_association-test_z_FDR_0.01 con_0033.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0001.nii unmasked 856.846
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0001.nii masked 856.846
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0002.nii unmasked 1618
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0002.nii masked 1618
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0003.nii unmasked 1526.78
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0003.nii masked 1526.78
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0004.nii unmasked 901.964
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0004.nii masked 901.964
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0005.nii unmasked 921.165
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0005.nii masked 921.165
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0006.nii unmasked 1333.88
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0006.nii masked 1333.88
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0007.nii unmasked -45.1182
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0007.nii masked -45.1182
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0008.nii unmasked 716.04
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0008.nii masked 716.04
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0009.nii unmasked 624.817
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0009.nii masked 624.817
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0010.nii unmasked 431.913
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0010.nii masked 431.913
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0011.nii unmasked 19.201
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0011.nii masked 19.201
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0012.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0013.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0014.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0015.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0016.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0017.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0018.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0019.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0020.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0021.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0022.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0023.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0024.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0025.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0026.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0027.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0028.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0029.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0030.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0031.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0032.nii masked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 craving_uniformity-test_z_FDR_0.01 con_0033.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0001.nii unmasked -71.0407
+RRV206 craving_association-test_z_FDR_0.01 con_0001.nii masked -71.0407
+RRV206 craving_association-test_z_FDR_0.01 con_0002.nii unmasked 66.6483
+RRV206 craving_association-test_z_FDR_0.01 con_0002.nii masked 66.6483
+RRV206 craving_association-test_z_FDR_0.01 con_0003.nii unmasked -8.50212
+RRV206 craving_association-test_z_FDR_0.01 con_0003.nii masked -8.50212
+RRV206 craving_association-test_z_FDR_0.01 con_0004.nii unmasked -14.3933
+RRV206 craving_association-test_z_FDR_0.01 con_0004.nii masked -14.3933
+RRV206 craving_association-test_z_FDR_0.01 con_0005.nii unmasked -28.8066
+RRV206 craving_association-test_z_FDR_0.01 con_0005.nii masked -28.8066
+RRV206 craving_association-test_z_FDR_0.01 con_0006.nii unmasked -4.29817
+RRV206 craving_association-test_z_FDR_0.01 con_0006.nii masked -4.29817
+RRV206 craving_association-test_z_FDR_0.01 con_0007.nii unmasked -56.6474
+RRV206 craving_association-test_z_FDR_0.01 con_0007.nii masked -56.6474
+RRV206 craving_association-test_z_FDR_0.01 con_0008.nii unmasked 81.0416
+RRV206 craving_association-test_z_FDR_0.01 con_0008.nii masked 81.0416
+RRV206 craving_association-test_z_FDR_0.01 con_0009.nii unmasked 5.89115
+RRV206 craving_association-test_z_FDR_0.01 con_0009.nii masked 5.89115
+RRV206 craving_association-test_z_FDR_0.01 con_0010.nii unmasked 10.0951
+RRV206 craving_association-test_z_FDR_0.01 con_0010.nii masked 10.0951
+RRV206 craving_association-test_z_FDR_0.01 con_0011.nii unmasked -14.4134
+RRV206 craving_association-test_z_FDR_0.01 con_0011.nii masked -14.4134
+RRV206 craving_association-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0012.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0013.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0014.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0015.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0016.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0017.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0018.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0019.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0020.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0021.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0022.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0023.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0024.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0025.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0026.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0027.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0028.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0029.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0030.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0031.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0032.nii masked
+RRV206 craving_association-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 craving_association-test_z_FDR_0.01 con_0033.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0001.nii unmasked 18933
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0001.nii masked 18933
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0002.nii unmasked 13388.2
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0002.nii masked 13388.2
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0003.nii unmasked 16541.7
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0003.nii masked 16541.7
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0004.nii unmasked 10289.8
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0004.nii masked 10289.8
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0005.nii unmasked 4435.04
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0005.nii masked 4435.04
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0006.nii unmasked 16287.6
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0006.nii masked 16287.6
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0007.nii unmasked 8643.25
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0007.nii masked 8643.25
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0008.nii unmasked 3098.48
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0008.nii masked 3098.48
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0009.nii unmasked 6251.92
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0009.nii masked 6251.92
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0010.nii unmasked 5997.88
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0010.nii masked 5997.88
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0011.nii unmasked -5854.72
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0011.nii masked -5854.72
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0012.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0013.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0014.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0015.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0016.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0017.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0018.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0019.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0020.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0021.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0022.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0023.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0024.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0025.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0026.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0027.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0028.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0029.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0030.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0031.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0032.nii masked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 cognitive_control_uniformity-test_z_FDR_0.01 con_0033.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0001.nii unmasked 793.291
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0001.nii masked 793.291
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0002.nii unmasked 459.75
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0002.nii masked 459.75
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0003.nii unmasked 738.199
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0003.nii masked 738.199
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0004.nii unmasked 366.626
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0004.nii masked 366.626
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0005.nii unmasked 24.3089
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0005.nii masked 24.3089
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0006.nii unmasked 663.747
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0006.nii masked 663.747
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0007.nii unmasked 426.665
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0007.nii masked 426.665
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0008.nii unmasked 93.1242
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0008.nii masked 93.1242
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0009.nii unmasked 371.573
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0009.nii masked 371.573
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0010.nii unmasked 297.121
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0010.nii masked 297.121
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0011.nii unmasked -342.317
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0011.nii masked -342.317
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0012.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0012.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0013.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0013.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0014.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0014.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0015.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0015.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0016.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0016.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0017.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0017.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0018.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0018.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0019.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0019.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0020.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0020.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0021.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0021.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0022.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0022.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0023.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0023.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0024.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0024.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0025.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0025.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0026.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0026.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0027.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0027.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0028.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0028.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0029.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0029.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0030.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0030.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0031.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0031.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0032.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0032.nii masked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0033.nii unmasked
+RRV206 cognitive_control_association-test_z_FDR_0.01 con_0033.nii masked
