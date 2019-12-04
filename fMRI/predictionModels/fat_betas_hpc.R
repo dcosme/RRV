@@ -8,26 +8,9 @@ source("load_data.R")
 betas_std = betas %>%
   group_by(roi, session) %>%
   mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
-         meanPE_std = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
+         meanPE_std = ifelse(meanPE_std > 3, 3,
+                             ifelse(meanPE_std < -3, -3, meanPE_std))) %>%
   ungroup()
-
-dots_std = dots %>%
-  group_by(map, test, mask, session) %>%
-  mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
-         dotProduct_std = ifelse(dotProduct_std > 3 | dotProduct_std < -3, NA, dotProduct_std)) %>%
-  ungroup()
-
-# join data frames
-dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
-  mutate(subjectID = as.character(subjectID)) %>%
-  left_join(., ind_diffs, by = "subjectID") %>%
-  ungroup() %>%
-  mutate(subjectID = as.factor(subjectID),
-         condition = as.factor(condition),
-         control = as.factor(control),
-         roi = as.factor(roi),
-         process = as.factor(process),
-         test = as.factor(test))
 
 # SCA
 ## tidy data
@@ -46,26 +29,26 @@ betas_sca = betas_std %>%
   left_join(., ind_diffs) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
+betas_sca_fat = betas_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
+  unique() %>%
+  select(-bmi) %>%
+  spread(variable, meanProcessPEstd) %>%
+  ungroup() %>%
+  na.omit()
+
 # set na.action for dredge
 options(na.action = "na.fail")
 
 # specify number of cores
 n_cores = 28
 
-data_fat = betas_sca %>%
-  filter(grepl("snack|meal|dessert|food", variable)) %>%
-  unique() %>%
-  select(-bmi) %>%
-  na.omit()
-
 # betas > rest
 if (file.exists("fat_betas_rest_sca.RDS")) {
   betas_rest_sca = readRDS("fat_betas_rest_sca.RDS")
 } else {
-  data = data_fat %>%
-    filter(grepl("rest$", variable)) %>%
-    spread(variable, meanProcessPEstd) %>%
-    ungroup()
+  data = betas_sca_fat %>%
+    select_if(grepl("subjectID|fat|rest", names(.)))
   lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
@@ -86,10 +69,8 @@ if (file.exists("fat_betas_rest_sca.RDS")) {
 if (file.exists("fat_betas_nature_sca.RDS")) {
   betas_nature_sca = readRDS("fat_betas_nature_sca.RDS")
 } else {
-  data = data_fat %>%
-    filter(grepl("nature$", variable)) %>%
-    spread(variable, meanProcessPEstd) %>%
-    ungroup()
+  data = betas_sca_fat %>%
+    select_if(grepl("subjectID|fat|nature", names(.)))
   lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 

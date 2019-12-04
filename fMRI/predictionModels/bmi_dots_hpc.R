@@ -5,29 +5,12 @@ library(tidyverse)
 source("load_data.R")
 
 # standardize
-betas_std = betas %>%
-  group_by(roi, session) %>%
-  mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
-         meanPE_std = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
-  ungroup()
-
 dots_std = dots %>%
   group_by(map, test, mask, session) %>%
   mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
-         dotProduct_std = ifelse(dotProduct_std > 3 | dotProduct_std < -3, NA, dotProduct_std)) %>%
+         dotProduct_std = ifelse(dotProduct_std > 3, 3,
+                          ifelse(dotProduct_std < -3, -3, dotProduct_std))) %>%
   ungroup()
-
-# join data frames
-dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
-  mutate(subjectID = as.character(subjectID)) %>%
-  left_join(., ind_diffs, by = "subjectID") %>%
-  ungroup() %>%
-  mutate(subjectID = as.factor(subjectID),
-         condition = as.factor(condition),
-         control = as.factor(control),
-         roi = as.factor(roi),
-         process = as.factor(process),
-         test = as.factor(test))
 
 # SCA
 ## tidy data
@@ -40,26 +23,27 @@ dots_sca = dots_std %>%
   left_join(., ind_diffs) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
+dots_sca_bmi = dots_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
+  unique() %>%
+  select(-fat) %>%
+  spread(variable, dotProduct_std) %>%
+  ungroup() %>%
+  na.omit()
+
 # set na.action for dredge
 options(na.action = "na.fail")
 
 # specify number of cores
 n_cores = 28
 
-data_bmi = dots_sca %>%
-  filter(grepl("snack|meal|dessert|food", variable)) %>%
-  unique() %>%
-  select(-fat) %>%
-  na.omit()
-
 # dots association > rest
 if (file.exists("bmi_dots_rest_assoc_sca.RDS")) {
   dots_rest_assoc_sca = readRDS("bmi_dots_rest_assoc_sca.RDS")
 } else {
-  data = data_bmi %>%
-    filter(grepl("rest$", variable) & grepl("association", variable)) %>%
-    spread(variable, dotProduct_std) %>%
-    ungroup()
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|association", names(.))) %>%
+    select_if(grepl("subjectID|bmi|rest", names(.)))
   lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
 
@@ -80,10 +64,9 @@ if (file.exists("bmi_dots_rest_assoc_sca.RDS")) {
 if (file.exists("bmi_dots_rest_uniform_sca.RDS")) {
   dots_rest_uniform_sca = readRDS("bmi_dots_rest_uniform_sca.RDS")
 } else {
-  data = data_bmi %>%
-    filter(grepl("rest$", variable) & grepl("uniformity", variable)) %>%
-    spread(variable, dotProduct_std) %>%
-    ungroup()
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|uniformity", names(.))) %>%
+    select_if(grepl("subjectID|bmi|rest", names(.)))
   lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
 
@@ -104,10 +87,9 @@ if (file.exists("bmi_dots_rest_uniform_sca.RDS")) {
 if (file.exists("bmi_dots_nature_assoc_sca.RDS")) {
   dots_nature_assoc_sca = readRDS("bmi_dots_nature_assoc_sca.RDS")
 } else {
-  data = data_bmi %>%
-    filter(grepl("nature$", variable) & grepl("association", variable)) %>%
-    spread(variable, dotProduct_std) %>%
-    ungroup()
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|association", names(.))) %>%
+    select_if(grepl("subjectID|bmi|nature", names(.)))
   lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
 
@@ -128,10 +110,9 @@ if (file.exists("bmi_dots_nature_assoc_sca.RDS")) {
 if (file.exists("bmi_dots_nature_uniform_sca.RDS")) {
   dots_nature_uniform_sca = readRDS("bmi_dots_nature_uniform_sca.RDS")
 } else {
-  data = data_bmi %>%
-    filter(grepl("nature$", variable) & grepl("uniformity", variable)) %>%
-    spread(variable, dotProduct_std) %>%
-    ungroup()
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|uniformity", names(.))) %>%
+    select_if(grepl("subjectID|bmi|nature", names(.)))
   lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
 
