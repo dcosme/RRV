@@ -9,7 +9,7 @@
 STUDY=/projects/sanlab/shared/RRV/RRV_scripts
 
 # Set subject list
-SUBJLIST=`cat subject_list.txt`
+SUBJLIST=RRV001 #`cat subject_list.txt`
 
 # Set shell script to execute
 SHELL_SCRIPT=extract_parameterEstimates.sh
@@ -36,7 +36,7 @@ for SUB in $SUBJLIST; do
 	 	--cpus-per-task=${cpuspertask} \
 	 	--mem-per-cpu=${mempercpu} \
 	 	--account=sanlab \
-	 	--partition=short \
+	 	--partition=ctn \
 	 	${SHELL_SCRIPT}
  	sleep .25
 done

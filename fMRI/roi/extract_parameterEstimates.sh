@@ -16,7 +16,7 @@ echo ---------------------------------------------------------------------------
 # Set paths and variables
 # ------------------------------------------------------------------------------------------
 # variables
-cons=`echo $(printf "con_%04d.nii\n" {1..30})` #contrasts to extract parameter estimates from
+cons=`echo $(printf "con_%04d.nii\n" {1..33})` #contrasts to extract parameter estimates from
 radius=6 #mm sphere
 
 # paths

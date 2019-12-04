@@ -17,7 +17,7 @@ echo ---------------------------------------------------------------------------
 # ------------------------------------------------------------------------------------------
 # variables
 maps=(craving_regulation_neuralsig reward_uniformity-test_z_FDR_0.01 reward_association-test_z_FDR_0.01 value_uniformity-test_z_FDR_0.01 value_association-test_z_FDR_0.01 craving_uniformity-test_z_FDR_0.01 craving_association-test_z_FDR_0.01 cognitive_control_uniformity-test_z_FDR_0.01 cognitive_control_association-test_z_FDR_0.01) #maps (without file format, specified below as .nii.gz)
-images=`echo $(printf "con_%04d.nii\n" {1..30})` #participant images to multiply with maps
+images=`echo $(printf "con_%04d.nii\n" {1..33})` #participant images to multiply with maps
 
 # paths
 image_dir=/projects/sanlab/shared/RRV/nonbids_data/fMRI/fx/models/event/sub-"${SUB}" #fx directory
