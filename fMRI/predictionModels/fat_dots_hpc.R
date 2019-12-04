@@ -40,45 +40,27 @@ dots_sca = dots_std %>%
   left_join(., ind_diffs) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
-dots_rest_assoc = dots_sca %>%
-  filter(grepl("rest", variable) & grepl("snack|meal|dessert|food", variable) & grepl("association", variable)) %>%
-  spread(variable, dotProduct_std) %>%
-  unique() %>%
-  ungroup()
-
-dots_rest_uniform = dots_sca %>%
-  filter(grepl("rest", variable) & grepl("snack|meal|dessert|food", variable) & grepl("uniformity", variable)) %>%
-  spread(variable, dotProduct_std) %>%
-  unique() %>%
-  ungroup()
-
-dots_nature_assoc = dots_sca %>%
-  filter(grepl("nature", variable) & grepl("snack|meal|dessert|food", variable) & grepl("association", variable)) %>%
-  spread(variable, dotProduct_std) %>%
-  unique() %>%
-  ungroup()
-
-dots_nature_uniform = dots_sca %>%
-  filter(grepl("nature", variable) & grepl("snack|meal|dessert|food", variable) & grepl("uniformity", variable)) %>%
-  spread(variable, dotProduct_std) %>%
-  unique() %>%
-  ungroup()
-
 # set na.action for dredge
 options(na.action = "na.fail")
 
 # specify number of cores
 n_cores = 28
 
-## % fat
+data_fat = dots_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
+  unique() %>%
+  select(-bmi) %>%
+  na.omit()
+
 # dots association > rest
 if (file.exists("fat_dots_rest_assoc_sca.RDS")) {
   dots_rest_assoc_sca = readRDS("fat_dots_rest_assoc_sca.RDS")
 } else {
-  data = dots_rest_assoc %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_rest_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = data_fat %>%
+    filter(grepl("rest$", variable) & grepl("association", variable)) %>%
+    spread(variable, dotProduct_std) %>%
+    ungroup()
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
@@ -98,10 +80,11 @@ if (file.exists("fat_dots_rest_assoc_sca.RDS")) {
 if (file.exists("fat_dots_rest_uniform_sca.RDS")) {
   dots_rest_uniform_sca = readRDS("fat_dots_rest_uniform_sca.RDS")
 } else {
-  data = dots_rest_uniform %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_rest_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = data_fat %>%
+    filter(grepl("rest$", variable) & grepl("uniformity", variable)) %>%
+    spread(variable, dotProduct_std) %>%
+    ungroup()
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
@@ -121,10 +104,11 @@ if (file.exists("fat_dots_rest_uniform_sca.RDS")) {
 if (file.exists("fat_dots_nature_assoc_sca.RDS")) {
   dots_nature_assoc_sca = readRDS("fat_dots_nature_assoc_sca.RDS")
 } else {
-  data = dots_nature_assoc %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_nature_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = data_fat %>%
+    filter(grepl("nature$", variable) & grepl("association", variable)) %>%
+    spread(variable, dotProduct_std) %>%
+    ungroup()
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
@@ -144,11 +128,12 @@ if (file.exists("fat_dots_nature_assoc_sca.RDS")) {
 if (file.exists("fat_dots_nature_uniform_sca.RDS")) {
   dots_nature_uniform_sca = readRDS("fat_dots_nature_uniform_sca.RDS")
 } else {
-  data = dots_nature_uniform %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_nature_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
+  data = data_fat %>%
+    filter(grepl("nature$", variable) & grepl("uniformity", variable)) %>%
+    spread(variable, dotProduct_std) %>%
+    ungroup()
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
+  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)

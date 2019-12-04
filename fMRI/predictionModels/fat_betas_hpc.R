@@ -46,32 +46,27 @@ betas_sca = betas_std %>%
   left_join(., ind_diffs) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
-betas_rest = betas_sca %>%
-  filter(grepl("rest", variable) & grepl("snack|meal|dessert|food", variable)) %>%
-  unique() %>%
-  spread(variable, meanProcessPEstd) %>%
-  ungroup()
-
-betas_nature = betas_sca %>%
-  filter(grepl("nature", variable) & grepl("snack|meal|dessert|food", variable)) %>%
-  unique() %>%
-  spread(variable, meanProcessPEstd) %>%
-  ungroup()
-
 # set na.action for dredge
 options(na.action = "na.fail")
 
 # specify number of cores
 n_cores = 28
 
+data_fat = betas_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
+  unique() %>%
+  select(-bmi) %>%
+  na.omit()
+
 # betas > rest
 if (file.exists("fat_betas_rest_sca.RDS")) {
   betas_rest_sca = readRDS("fat_betas_rest_sca.RDS")
 } else {
-  data = betas_rest %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(betas_rest, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = data_fat %>%
+    filter(grepl("rest$", variable)) %>%
+    spread(variable, meanProcessPEstd) %>%
+    ungroup()
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
@@ -91,10 +86,11 @@ if (file.exists("fat_betas_rest_sca.RDS")) {
 if (file.exists("fat_betas_nature_sca.RDS")) {
   betas_nature_sca = readRDS("fat_betas_nature_sca.RDS")
 } else {
-  data = betas_nature %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(betas_nature, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = data_fat %>%
+    filter(grepl("nature$", variable)) %>%
+    spread(variable, meanProcessPEstd) %>%
+    ungroup()
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
