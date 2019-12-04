@@ -115,27 +115,24 @@ for (file in file_list) {
   rm(temp)
 }
 
+
+# load EMA data
+ema = read.csv("EMA_data.csv") %>%
+  rename("subjectID" = RRVID) %>%
+  select(-c(key, SSID, subID, SAMPLE, control))
+
 # load outcomes
 ind_diffs = read.csv("individual_diffs_outcomes.csv") %>%
   rename("subjectID" = RRV_ID_NEW,
          "age" = Age,
          "gender" = Gender,
          "sample" = Sample) %>%
-  mutate(subjectID = as.character(subjectID),
-         fat = ifelse(sample == "2012_FDES", fat * 100, fat)) %>%
-  select(sample, DBIC_ID, subjectID, age, gender, bmi, fat)
-
-# join data frames
-dataset = full_join(betas, dots, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
   mutate(subjectID = as.character(subjectID)) %>%
-  left_join(., ind_diffs, by = "subjectID") %>%
-  ungroup() %>%
-  mutate(subjectID = as.factor(subjectID),
-         condition = as.factor(condition),
-         control = as.factor(control),
-         roi = as.factor(roi),
-         process = as.factor(process),
-         test = as.factor(test))
+  select(sample, DBIC_ID, subjectID, age, gender, bmi, fat) %>%
+  left_join(., unique(select(ema, subjectID, fat)), by = "subjectID") %>%
+  mutate(fat.x = ifelse(sample == "2012_FDES", fat.y, fat.x)) %>%
+  select(-fat.y) %>%
+  rename("fat" = fat.x)
 
 
 
