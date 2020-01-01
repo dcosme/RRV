@@ -18,13 +18,13 @@ REPLACESID=001
 SPM_PATH=/projects/sanlab/shared/spm12
 
 # Set MATLAB script path
-SCRIPT=${STUDY}/fMRI/fx/models/fx_event.m
+SCRIPT=${STUDY}/fMRI/fx/models/fx_event_cons_soc_nat.m
 
 # Set shell script to execute
 SHELL_SCRIPT=spm_job.sh
 
 # RRV the results files
-RESULTS_INFIX=fx_event
+RESULTS_INFIX=fx_event_cons_soc_nat
 
 # Set output dir and make it if it doesn't exist
 OUTPUTDIR=${STUDY}/fMRI/fx/models/output
@@ -45,6 +45,7 @@ for SUB in $SUBJLIST; do
 		 	--cpus-per-task=${cpuspertask} \
 		 	--mem-per-cpu=${mempercpu} \
 		 	--account=sanlab \
-		 	${SHELL_SCRIPT}
+		 	--partition=short \
+			${SHELL_SCRIPT}
 	 	sleep .25
 done
