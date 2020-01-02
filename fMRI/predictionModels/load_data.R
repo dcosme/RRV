@@ -29,14 +29,14 @@ snack_cons3 = sprintf("con_%04d.nii", c(1:3, 19:21))
 meal_cons3 = sprintf("con_%04d.nii", c(4:6, 22:24))
 dessert_cons3 = sprintf("con_%04d.nii", c(7:9, 25:27))
 nature_cons3 = sprintf("con_%04d.nii", c(10:12))
-social_cons3 = sprintf("con_%04d.nii", c(13:15))
+social_cons3 = sprintf("con_%04d.nii", c(13:15, 31:33))
 food_cons3 = sprintf("con_%04d.nii", c(16:18, 28:30))
 
 snack_cons1 = sprintf("con_%04d.nii", c(1, 7))
 meal_cons1 = sprintf("con_%04d.nii", c(2, 8))
 dessert_cons1 = sprintf("con_%04d.nii", c(3, 9))
 nature_cons1 = sprintf("con_%04d.nii", c(4))
-social_cons1 = sprintf("con_%04d.nii", c(5))
+social_cons1 = sprintf("con_%04d.nii", c(5, 11))
 food_cons1 = sprintf("con_%04d.nii", c(6, 10))
 
 betas = betas_temp %>%
@@ -55,22 +55,22 @@ betas = betas_temp %>%
                ifelse(xyz == "32_-59_41", "right IPS",
                ifelse(xyz == "-32_-58_46", "left IPS",
                ifelse(xyz == "-6_49_1", "left vmPFC", NA)))))))))))),
-        condition = ifelse(n() > 120 & con %in% snack_cons3, "snack",
-                    ifelse(n() > 120 & con %in% meal_cons3, "meal",
-                    ifelse(n() > 120 & con %in% dessert_cons3, "dessert",
-                    ifelse(n() > 120 & con %in% nature_cons3, "nature",
-                    ifelse(n() > 120 & con %in% social_cons3, "social",
-                    ifelse(n() > 120 & con %in% food_cons3, "food",
-                    ifelse(n() == 120 & con %in% snack_cons1, "snack",
-                    ifelse(n() == 120 & con %in% meal_cons1, "meal",
-                    ifelse(n() == 120 & con %in% dessert_cons1, "dessert",
-                    ifelse(n() == 120 & con %in% nature_cons1, "nature",
-                    ifelse(n() == 120 & con %in% social_cons1, "social",
-                    ifelse(n() == 120 & con %in% food_cons1, "food", NA)))))))))))),
-        control = ifelse(n() > 120 & con %in% sprintf("con_%04d.nii", c(19:30)), "nature",
-                  ifelse(n() == 120 & con %in% sprintf("con_%04d.nii", c(7:10)), "nature", "rest")),
-        session = ifelse(n() > 120 & con %in% sprintf("con_%04d.nii", seq(1,30,3)), "1",
-                  ifelse(n() > 120 & con %in% sprintf("con_%04d.nii", seq(2,30,3)), "2", "all")),
+        condition = ifelse(n() > 132 & con %in% snack_cons3, "snack",
+                    ifelse(n() > 132 & con %in% meal_cons3, "meal",
+                    ifelse(n() > 132 & con %in% dessert_cons3, "dessert",
+                    ifelse(n() > 132 & con %in% nature_cons3, "nature",
+                    ifelse(n() > 132 & con %in% social_cons3, "social",
+                    ifelse(n() > 132 & con %in% food_cons3, "food",
+                    ifelse(n() == 132 & con %in% snack_cons1, "snack",
+                    ifelse(n() == 132 & con %in% meal_cons1, "meal",
+                    ifelse(n() == 132 & con %in% dessert_cons1, "dessert",
+                    ifelse(n() == 132 & con %in% nature_cons1, "nature",
+                    ifelse(n() == 132 & con %in% social_cons1, "social",
+                    ifelse(n() == 132 & con %in% food_cons1, "food", NA)))))))))))),
+        control = ifelse(n() > 132 & con %in% sprintf("con_%04d.nii", c(19:33)), "nature",
+                  ifelse(n() == 132 & con %in% sprintf("con_%04d.nii", c(7:11)), "nature", "rest")),
+        session = ifelse(n() > 132 & con %in% sprintf("con_%04d.nii", seq(1,33,3)), "1",
+                  ifelse(n() > 132 & con %in% sprintf("con_%04d.nii", seq(2,33,3)), "2", "all")),
         process = ifelse(grepl("VS|OFC", roi), "reward",
                   ifelse(grepl("vmPFC", roi), "value", "cognitive_control"))) %>%
   ungroup() %>%
@@ -84,7 +84,7 @@ file_list = list.files(file_dir, pattern = file_pattern)
 dots = data.frame()
 
 for (file in file_list) {
-  temp = tryCatch(read.table(file.path(file_dir,file), fill = TRUE) %>%
+  temp = tryCatch(read.table(file.path(file_dir,file), fill = TRUE, header = FALSE) %>%
                     rename("subjectID" = V1,
                            "map" = V2,
                            "con" = V3,
@@ -94,22 +94,22 @@ for (file in file_list) {
                     extract(map, c("process", "test"), "(.*)_(association|uniformity)-.*", remove = FALSE) %>%
                     mutate(process = ifelse(grepl("neuralsig", map), "craving_regulation", process),
                            test = ifelse(grepl("neuralsig", map), "association", test),
-                           condition = ifelse(n() > 180 & con %in% snack_cons3, "snack",
-                                       ifelse(n() > 180 & con %in% meal_cons3, "meal",
-                                       ifelse(n() > 180 & con %in% dessert_cons3, "dessert",
-                                       ifelse(n() > 180 & con %in% nature_cons3, "nature",
-                                       ifelse(n() > 180 & con %in% social_cons3, "social",
-                                       ifelse(n() > 180 & con %in% food_cons3, "food",
-                                       ifelse(n() == 180 & con %in% snack_cons1, "snack",
-                                       ifelse(n() == 180 & con %in% meal_cons1, "meal",
-                                       ifelse(n() == 180 & con %in% dessert_cons1, "dessert",
-                                       ifelse(n() == 180 & con %in% nature_cons1, "nature",
-                                       ifelse(n() == 180 & con %in% social_cons1, "social",
-                                       ifelse(n() == 180 & con %in% food_cons1, "food", NA)))))))))))),
-                           control = ifelse(n() > 180 & con %in% sprintf("con_%04d.nii", c(19:30)), "nature",
-                                     ifelse(n() == 180 & con %in% sprintf("con_%04d.nii", c(7:10)), "nature", "rest")),
-                           session = ifelse(n() > 180 & con %in% sprintf("con_%04d.nii", seq(1,30,3)), "1",
-                                     ifelse(n() > 180 & con %in% sprintf("con_%04d.nii", seq(2,30,3)), "2", "all"))), error = function(e) message(file))
+                           condition = ifelse(n() > 198 & con %in% snack_cons3, "snack",
+                                       ifelse(n() > 198 & con %in% meal_cons3, "meal",
+                                       ifelse(n() > 198 & con %in% dessert_cons3, "dessert",
+                                       ifelse(n() > 198 & con %in% nature_cons3, "nature",
+                                       ifelse(n() > 198 & con %in% social_cons3, "social",
+                                       ifelse(n() > 198 & con %in% food_cons3, "food",
+                                       ifelse(n() <= 198 & con %in% snack_cons1, "snack",
+                                       ifelse(n() <= 198 & con %in% meal_cons1, "meal",
+                                       ifelse(n() <= 198 & con %in% dessert_cons1, "dessert",
+                                       ifelse(n() <= 198 & con %in% nature_cons1, "nature",
+                                       ifelse(n() <= 198 & con %in% social_cons1, "social",
+                                       ifelse(n() <= 198 & con %in% food_cons1, "food", NA)))))))))))),
+                           control = ifelse(n() > 198 & con %in% sprintf("con_%04d.nii", c(19:33)), "nature",
+                                     ifelse(n() <= 198 & con %in% sprintf("con_%04d.nii", c(7:11)), "nature", "rest")),
+                           session = ifelse(n() > 198 & con %in% sprintf("con_%04d.nii", seq(1,33,3)), "1",
+                                     ifelse(n() > 198 & con %in% sprintf("con_%04d.nii", seq(2,33,3)), "2", "all"))), error = function(e) message(file))
 
   dots = rbind(dots, temp)
   rm(temp)
@@ -133,8 +133,6 @@ ind_diffs = read.csv("individual_diffs_outcomes.csv") %>%
   mutate(fat.x = ifelse(sample == "2012_FDES", fat.y, fat.x)) %>%
   select(-fat.y) %>%
   rename("fat" = fat.x)
-
-
 
 
 
