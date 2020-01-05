@@ -17,23 +17,36 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, fig.path = "figs/")
 ```
 
 # load packages
 ```{r}
 library(tidyverse)
+library(knitr)
+```
+
+# define palettes
+```{r}
+pal_control = c("#2E86B4", "#F2B827")
+pal_condition = wesanderson::wes_palette("Zissou1", 6, "continuous")
 ```
 
 # source data
-```{r}
+* Note that % fat variable was incorrect in 2012_FDES --> replaced it with the data from the EMA dataframe
+
+```{r, cache=TRUE}
 source("load_data.R")
 ```
 
 # standardize brain data
+* Windsorizing observations +/- 3 SD from the mean to 3 --> otherwise we lose these subs in the SCA analyses  
+* Z-score within ROI and session for ROIs  
+* Z-score within map, test (association or uniformity), mask (masked or unmasked) and session for MAMs  
+
 ```{r}
 # roi distributions
-dataset %>%
+betas %>%
   filter(session == "all") %>%
   select(subjectID, con, condition, control, roi, process, meanPE) %>%
   unique() %>%
@@ -41,30 +54,33 @@ dataset %>%
   ggplot(aes(meanPE, fill = roi)) +
   geom_density(color = NA) +
   facet_wrap(~roi, ncol = 4) +
-  theme_minimal() +
+  theme_minimal(base_size = 14) +
   theme(legend.position = "none")
 
 # dot product distribution
-dataset %>%
+dots %>%
   filter(session == "all") %>%
   select(subjectID, con, condition, control, process, test, dotProduct) %>%
   unique() %>%
   ggplot(aes(dotProduct, fill = test)) +
   geom_density(color = NA) +
   facet_wrap(~process, ncol = 3, scales = "free") +
-  theme_minimal()
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(.85, .2))
 
-# standardize
+# standardize and winsorize
 betas_std = betas %>%
   group_by(roi, session) %>%
   mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
-         meanPE = ifelse(meanPE_std > 3 | meanPE_std < -3, NA, meanPE_std)) %>%
+         meanPE_std = ifelse(meanPE_std > 3, 3,
+                      ifelse(meanPE_std < -3, -3, meanPE_std))) %>%
   ungroup()
 
 dots_std = dots %>%
   group_by(map, test, mask, session) %>%
   mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
-         dotProduct = ifelse(dotProduct_std > 3 | dotProduct_std < -3, 9999, dotProduct_std)) %>%
+         dotProduct_std = ifelse(dotProduct_std > 3, 3,
+                          ifelse(dotProduct_std < -3, -3, dotProduct_std))) %>%
   ungroup()
 
 # join data frames
@@ -78,13 +94,282 @@ dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "
          roi = as.factor(roi),
          process = as.factor(process),
          test = as.factor(test))
+
+saveRDS(dataset, "full_dataset.RDS")
 ```
 
-# tidy data
+# visualize
+## tidy data
+* Select masked maps for neurosynth MAMs  
+* Select the unmasked map for the craving regulation signature  
+* Select cons generated across all sessions  
+* Calculate mean across ROIs within each psychological process  
+* Calculate balance score ROI = cognitive control - reward  
+
+```{r}
+dots_plot = dots_std %>%
+  filter((!grepl("neuralsig", map) &  mask == "masked") | (grepl("neuralsig", map) & mask == "unmasked")) %>%
+  filter(session == "all") %>%
+  select(-c(map, con, mask, session, dotProduct)) %>%
+  left_join(., ind_diffs) %>%
+  select(-c(sample, DBIC_ID, age, gender))
+
+betas_plot = betas_std %>%
+  group_by(subjectID, process, condition, control) %>%
+  mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE)) %>%
+  select(-c(con, xyz, roi, meanPE, sdPE, meanPE_std)) %>%
+  unique() %>%
+  spread(process, meanProcessPEstd) %>%
+  mutate(balance = cognitive_control - reward) %>%
+  gather(process, meanProcessPEstd, cognitive_control, reward, value, balance) %>%
+  filter(session == "all") %>%
+  select(-c(session)) %>%
+  left_join(., ind_diffs) %>%
+  select(-c(sample, DBIC_ID, age, gender)) %>%
+  ungroup()
+```
+
+## plot
+### ROIs
+Mean parameter estimates as a function of process, stimulus type, and control condition
+
+```{r, fig.width=8, fig.height=4.5}
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(condition, meanProcessPEstd, fill = control)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(~process) +
+  scale_fill_manual(name = "", values = pal_control) +
+  labs(x = "\nstimulus", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(control, meanProcessPEstd, fill = condition)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(~process) +
+  scale_fill_manual(name = "", values = pal_condition) +
+  labs(x = "\ncontrol condition", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+Correlations between variables and BMI or % fat
+```{r, fig.width=10, fig.height=8}
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(bmi, meanProcessPEstd, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control~process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nBMI", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(fat, meanProcessPEstd, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control~process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nbody composition (% fat)", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+### MAMs
+Mean correspondance as a function of process, stimulus type, control condition, and test
+
+```{r, fig.width=10, fig.height=8}
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(condition, dotProduct_std, fill = control)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(test~process) +
+  scale_fill_manual(name = "", values = pal_control) +
+  labs(x = "\nstimulus", y = "mean correspondance\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(control, dotProduct_std, fill = condition)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(test~process) +
+  scale_fill_manual(name = "", values = pal_condition) +
+  labs(x = "\ncontrol condition", y = "mean correspondance\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+Correlations between variables and BMI or % fat
+```{r, fig.width=12, fig.height=12}
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(bmi, dotProduct_std, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control + test ~ process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nBMI", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(fat, dotProduct_std, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control + test ~ process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nbody composition (% fat)", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+### correlations among ROIs and MAMs
+```{r}
+dots_plot %>%
+  filter(!grepl("craving", process)) %>%
+  left_join(., betas_plot) %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(meanProcessPEstd, dotProduct_std, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control + test ~ process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nmean standardized parameter estimate", y = "mean standardized PEV\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+#### MAMs v ROIs
+```{r, fig.width=14, fig.height=17}
+dots_plot %>%
+  unite(var, process, test, condition, control, sep = "_") %>%
+  mutate(var = sprintf("dot_%s", var)) %>%
+  spread(var, dotProduct_std) %>%
+  left_join(., betas_plot) %>%
+  unite(var, process, condition, control, sep = "_") %>%
+  mutate(var = sprintf("roi_%s", var)) %>%
+  spread(var, meanProcessPEstd) %>%
+  select(-subjectID) %>%
+  cor(., use = "pairwise.complete.obs") %>%
+  reshape2::melt() %>%
+  filter(!grepl("dot", Var1) & !grepl("roi", Var2)) %>%
+  ggplot(aes(Var1, Var2, fill = value)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(name = "correlation\n", colors = c(pal_condition[1], "white", pal_condition[6]), limits = c(-1, 1), breaks = c(-1, 0, 1)) + 
+    geom_text(aes(label = round(value, 1)), size = 2) +
+    labs(x = "", y = "") + 
+    theme(legend.text = element_text(size = 8),
+          legend.position = "top",
+          legend.title = element_blank(),
+          axis.text = element_text(color = "black"),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+```
+
+#### ROIs
+```{r, fig.width=10, fig.height=10}
+dots_plot %>%
+  unite(var, process, test, condition, control, sep = "_") %>%
+  mutate(var = sprintf("dot_%s", var)) %>%
+  spread(var, dotProduct_std) %>%
+  left_join(., betas_plot) %>%
+  unite(var, process, condition, control, sep = "_") %>%
+  mutate(var = sprintf("roi_%s", var)) %>%
+  spread(var, meanProcessPEstd) %>%
+  select(-subjectID) %>%
+  cor(., use = "pairwise.complete.obs") %>%
+  reshape2::melt() %>%
+  filter(grepl("roi", Var1) & grepl("roi", Var2)) %>%
+  ggplot(aes(Var1, Var2, fill = value)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(name = "correlation\n", colors = c(pal_condition[1], "white", pal_condition[6]), limits = c(-1, 1), breaks = c(-1, 0, 1)) + 
+    geom_text(aes(label = round(value, 1)), size = 2) +
+    labs(x = "", y = "") + 
+    theme(legend.text = element_text(size = 8),
+          legend.position = "top",
+          legend.title = element_blank(),
+          axis.text = element_text(color = "black"),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+
+```
+
+#### MAMs
+```{r, fig.width=16, fig.height=16}
+dots_plot %>%
+  unite(var, process, test, condition, control, sep = "_") %>%
+  mutate(var = sprintf("dot_%s", var)) %>%
+  spread(var, dotProduct_std) %>%
+  left_join(., betas_plot) %>%
+  unite(var, process, condition, control, sep = "_") %>%
+  mutate(var = sprintf("roi_%s", var)) %>%
+  spread(var, meanProcessPEstd) %>%
+  select(-subjectID) %>%
+  cor(., use = "pairwise.complete.obs") %>%
+  reshape2::melt() %>%
+  filter(grepl("dot", Var1) & grepl("dot", Var2)) %>%
+  ggplot(aes(Var1, Var2, fill = value)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(name = "correlation\n", colors = c(pal_condition[1], "white", pal_condition[6]), limits = c(-1, 1), breaks = c(-1, 0, 1)) + 
+    geom_text(aes(label = round(value, 1)), size = 2) +
+    labs(x = "", y = "") + 
+    theme(legend.text = element_text(size = 8),
+          legend.position = "top",
+          legend.title = element_blank(),
+          axis.text = element_text(color = "black"),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+```
+
+# run cross-validated models
+## tidy data
+* Run models during snack exposure since that condition elicited the strongest activation across ROIs and MAMs  
+
 ```{r}
 model_data = dataset %>%
   filter(((!grepl("neuralsig", map) & test == "association" & mask == "masked") | (grepl("neuralsig", map) & mask == "unmasked")) & 
-           session == "all" & control == "nature" & condition == "food") %>%
+           session == "all" & control == "nature" & condition == "snack") %>%
   unique() %>%
   group_by(process, subjectID) %>%
   mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE),
@@ -96,86 +381,478 @@ model_data = dataset %>%
   fill(everything(), .direction = "down") %>%
   fill(everything(), .direction = "up") %>%
   select(-c(roi, cravingPE, craving_regulationPE, test, age, gender, mask)) %>%
-  unique()
+  unique() %>%
+  mutate(balancePE = cognitive_controlPE - rewardPE)
 ```
 
-# run cross-validated models
+## VIF
+```{r}
+# BMI
+car::vif(lm(bmi ~ rewardPE + valuePE + reward + value + craving_regulation,
+                     data = model_data))
+
+# %fat
+car::vif(lm(fat ~ rewardPE + valuePE + reward + value + craving_regulation,
+                     data = model_data))
+```
+
 ## BMI
 ```{r}
 data_ctrl = caret::trainControl(method = "cv", number = 5)
+```
 
-model_bmi_roi = caret::train(bmi ~ rewardPE + valuePE + cognitive_controlPE,
+### ROI models
+```{r}
+model_bmi_roi1 = caret::train(bmi ~ rewardPE,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
 
-model_bmi_corr = caret::train(bmi ~ reward + value + cognitive_control,
+model_bmi_roi2 = caret::train(bmi ~ valuePE,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
 
+model_bmi_roi3 = caret::train(bmi ~ cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_roi4 = caret::train(bmi ~ balancePE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_roi5 = caret::train(bmi ~ rewardPE + valuePE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_roi6 = caret::train(bmi ~ rewardPE + cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_roi7 = caret::train(bmi ~ valuePE + cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_roi8 = caret::train(bmi ~ valuePE + balancePE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_roi9 = caret::train(bmi ~ valuePE + rewardPE + cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(model_bmi_roi1$finalModel, model_bmi_roi2$finalModel, model_bmi_roi3$finalModel, model_bmi_roi4$finalModel, model_bmi_roi5$finalModel,
+      model_bmi_roi6$finalModel, model_bmi_roi7$finalModel, model_bmi_roi8$finalModel, model_bmi_roi9$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+```
+
+Summarize the best fitting model  
+
+```{r}
+summary(model_bmi_roi5$finalModel)
+model_bmi_roi5
+sd(model_bmi_roi5$resample$Rsquared)
+```
+
+### MAM models
+```{r}
+model_bmi_mam1 = caret::train(bmi ~ reward,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam2 = caret::train(bmi ~ value,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam3 = caret::train(bmi ~ craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam4 = caret::train(bmi ~ cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam5 = caret::train(bmi ~ reward + value,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam6 = caret::train(bmi ~ reward + cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam7 = caret::train(bmi ~ reward + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam8 = caret::train(bmi ~ value + cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam9 = caret::train(bmi ~ value + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam10 = caret::train(bmi ~ cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam11 = caret::train(bmi ~ reward + value + cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam12 = caret::train(bmi ~ reward + value + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam13 = caret::train(bmi ~ reward + cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam14 = caret::train(bmi ~ value + cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_bmi_mam15 = caret::train(bmi ~ value + reward + cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(model_bmi_mam1$finalModel, model_bmi_mam2$finalModel, model_bmi_mam3$finalModel, model_bmi_mam4$finalModel, model_bmi_mam5$finalModel,
+    model_bmi_mam6$finalModel, model_bmi_mam7$finalModel, model_bmi_mam8$finalModel, model_bmi_mam9$finalModel, model_bmi_mam10$finalModel,
+    model_bmi_mam11$finalModel, model_bmi_mam12$finalModel, model_bmi_mam13$finalModel, model_bmi_mam14$finalModel, model_bmi_mam15$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+```
+
+Summarize the best fitting model  
+
+```{r}
+summary(model_bmi_mam5$finalModel)
+model_bmi_mam5
+sd(model_bmi_mam5$resample$Rsquared)
+```
+
+### craving regulation model
+```{r}
 model_bmi_cr = caret::train(bmi ~ craving_regulation,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
-
-model_bmi_combined = caret::train(bmi ~ rewardPE + valuePE + cognitive_controlPE + reward + value + cognitive_control + craving_regulation,
-                     data = model_data,
-                     trControl = data_ctrl,
-                     method = "lm",
-                     na.action = na.omit)
-
-AIC(model_bmi_roi$finalModel, model_bmi_corr$finalModel, model_bmi_cr$finalModel, model_bmi_combined$finalModel)
-
-
-summary(model_bmi_roi)
-summary(model_bmi_corr)
-summary(model_bmi_cr)
-summary(model_bmi_combined)
 ```
 
-## body fat
+Summarize the best fitting model  
+
+```{r}
+summary(model_bmi_cr$finalModel)
+model_bmi_cr
+sd(model_bmi_cr$resample$Rsquared)
+```
+
+### combined
+```{r}
+model_bmi_combined = caret::train(bmi ~ rewardPE + valuePE + reward + value + craving_regulation,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(model_bmi_roi5$finalModel, model_bmi_mam4$finalModel, model_bmi_cr$finalModel, model_bmi_combined$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+```
+
+Summarize the combined model  
+
+```{r}
+summary(model_bmi_combined$finalModel)
+model_bmi_combined
+sd(model_bmi_combined$resample$Rsquared)
+```
+
+## % fat
 ```{r}
 data_ctrl = caret::trainControl(method = "cv", number = 5)
+```
 
-model_fat_roi = caret::train(fat ~ rewardPE + valuePE + cognitive_controlPE,
+### ROI models
+```{r}
+model_fat_roi1 = caret::train(fat ~ rewardPE,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
 
-model_fat_corr = caret::train(fat ~ reward + value + cognitive_control,
+model_fat_roi2 = caret::train(fat ~ valuePE,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
 
+model_fat_roi3 = caret::train(fat ~ cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_roi4 = caret::train(fat ~ balancePE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_roi5 = caret::train(fat ~ rewardPE + valuePE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_roi6 = caret::train(fat ~ rewardPE + cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_roi7 = caret::train(fat ~ valuePE + cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_roi8 = caret::train(fat ~ valuePE + balancePE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_roi9 = caret::train(fat ~ valuePE + rewardPE + cognitive_controlPE,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(model_fat_roi1$finalModel, model_fat_roi2$finalModel, model_fat_roi3$finalModel, model_fat_roi4$finalModel, model_fat_roi5$finalModel,
+      model_fat_roi6$finalModel, model_fat_roi7$finalModel, model_fat_roi8$finalModel, model_fat_roi9$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+```
+
+Summarize the best fitting model  
+
+```{r}
+summary(model_fat_roi2$finalModel)
+model_fat_roi2
+sd(model_fat_roi2$resample$Rsquared)
+```
+
+### MAM models
+```{r}
+model_fat_mam1 = caret::train(fat ~ reward,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam2 = caret::train(fat ~ value,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam3 = caret::train(fat ~ craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam4 = caret::train(fat ~ cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam5 = caret::train(fat ~ reward + value,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam6 = caret::train(fat ~ reward + cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam7 = caret::train(fat ~ reward + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam8 = caret::train(fat ~ value + cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam9 = caret::train(fat ~ value + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam10 = caret::train(fat ~ cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam11 = caret::train(fat ~ reward + value + cognitive_control,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam12 = caret::train(fat ~ reward + value + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam13 = caret::train(fat ~ reward + cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam14 = caret::train(fat ~ value + cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+model_fat_mam15 = caret::train(fat ~ value + reward + cognitive_control + craving,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(model_fat_mam1$finalModel, model_fat_mam2$finalModel, model_fat_mam3$finalModel, model_fat_mam4$finalModel, model_fat_mam5$finalModel,
+    model_fat_mam6$finalModel, model_fat_mam7$finalModel, model_fat_mam8$finalModel, model_fat_mam9$finalModel, model_fat_mam10$finalModel,
+    model_fat_mam11$finalModel, model_fat_mam12$finalModel, model_fat_mam13$finalModel, model_fat_mam14$finalModel, model_fat_mam15$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+```
+
+Summarize the best fitting model  
+
+```{r}
+summary(model_fat_mam3$finalModel)
+model_fat_mam3
+sd(model_fat_mam3$resample$Rsquared)
+```
+
+### craving regulation model
+```{r}
 model_fat_cr = caret::train(fat ~ craving_regulation,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
+```
 
-model_fat_combined = caret::train(fat ~ rewardPE + valuePE + cognitive_controlPE + reward + value + cognitive_control + craving_regulation,
+Summarize the best fitting model  
+
+```{r}
+summary(model_fat_cr$finalModel)
+model_fat_cr
+sd(model_fat_cr$resample$Rsquared)
+```
+
+### combined
+```{r}
+model_fat_combined = caret::train(fat ~ valuePE + craving + craving_regulation,
                      data = model_data,
                      trControl = data_ctrl,
                      method = "lm",
                      na.action = na.omit)
 
-AIC(model_fat_roi$finalModel, model_fat_corr$finalModel, model_fat_cr$finalModel, model_fat_combined$finalModel)
+AIC(model_fat_roi1$finalModel, model_fat_mam1$finalModel, model_fat_cr$finalModel, model_fat_combined$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+```
 
+Summarize the best fitting model  
 
-summary(model_fat_roi)
-summary(model_fat_corr)
-summary(model_fat_cr)
-summary(model_fat_combined)
+```{r}
+summary(model_fat_combined$finalModel)
+model_fat_combined
+sd(model_fat_combined$resample$Rsquared)
 ```
 
 # SCA
 ## tidy data
+* There are too many variables to run all of the possible permutations together  
+* Instead, we ran permuted models for each of the following groups of data separately on the same dataset and the compare AIC together when plotting  
+    * BMI ~ ROIs > rest  
+    * BMI ~ ROIs > nature  
+    * BMI ~ association MAMs > rest  
+    * BMI ~ uniformity MAMs > rest  
+    * BMI ~ association MAMs > nature  
+    * BMI ~ uniformity MAMs > nature  
+    * fat ~ ROIs > rest  
+    * fat ~ ROIs > nature  
+    * fat ~ association MAMs > rest  
+    * fat ~ uniformity MAMs > rest  
+    * fat ~ association MAMs > nature  
+    * fat ~ uniformity MAMs > nature  
+
 ```{r}
 dots_sca = dots_std %>%
   filter((!grepl("neuralsig", map) &  mask == "masked") | (grepl("neuralsig", map) & mask == "unmasked")) %>%
@@ -186,100 +863,122 @@ dots_sca = dots_std %>%
   left_join(., ind_diffs) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
-dots_rest_assoc = dots_sca %>%
-  filter(grepl("rest", variable) & grepl("snack|meal|dessert|food", variable) & grepl("association", variable)) %>%
-  spread(variable, dotProduct_std) %>%
+dots_sca_bmi = dots_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
   unique() %>%
-  ungroup()
+  select(-fat) %>%
+  spread(variable, dotProduct_std) %>%
+  ungroup() %>%
+  na.omit()
 
-dots_rest_uniform = dots_sca %>%
-  filter(grepl("rest", variable) & grepl("snack|meal|dessert|food", variable) & grepl("uniformity", variable)) %>%
-  spread(variable, dotProduct_std) %>%
+dots_sca_fat = dots_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
   unique() %>%
-  ungroup()
-
-dots_nature_assoc = dots_sca %>%
-  filter(grepl("nature", variable) & grepl("snack|meal|dessert|food", variable) & grepl("association", variable)) %>%
+  select(-bmi) %>%
   spread(variable, dotProduct_std) %>%
-  unique() %>%
-  ungroup()
-
-dots_nature_uniform = dots_sca %>%
-  filter(grepl("nature", variable) & grepl("snack|meal|dessert|food", variable) & grepl("uniformity", variable)) %>%
-  spread(variable, dotProduct_std) %>%
-  unique() %>%
-  ungroup()
+  ungroup() %>%
+  na.omit()
 
 betas_sca = betas_std %>%
   group_by(subjectID, process, condition, control) %>%
   mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE)) %>%
+  select(-c(con, xyz, roi, meanPE, sdPE, meanPE_std)) %>%
+  unique() %>%
+  spread(process, meanProcessPEstd) %>%
+  mutate(balance = cognitive_control - reward) %>%
+  gather(process, meanProcessPEstd, cognitive_control, reward, value, balance) %>%
   unite(variable, process, condition, control, sep = "_", remove = TRUE) %>%
   mutate(variable = sprintf("univariate_%s", variable)) %>%
   filter(session == "all") %>%
-  select(-c(con, session, xyz, roi, meanPE, sdPE, meanPE_std)) %>%
+  select(-c(session)) %>%
   left_join(., ind_diffs) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
-betas_rest = betas_sca %>%
-  filter(grepl("rest", variable) & grepl("snack|meal|dessert|food", variable)) %>%
+betas_sca_bmi = betas_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
   unique() %>%
+  select(-fat) %>%
   spread(variable, meanProcessPEstd) %>%
-  ungroup()
+  ungroup() %>%
+  na.omit()
 
-betas_nature = betas_sca %>%
-  filter(grepl("nature", variable) & grepl("snack|meal|dessert|food", variable)) %>%
+betas_sca_fat = betas_sca %>%
+  filter(grepl("snack|meal|dessert|food", variable)) %>%
   unique() %>%
+  select(-bmi) %>%
   spread(variable, meanProcessPEstd) %>%
-  ungroup()
-
+  ungroup() %>%
+  na.omit()
 ```
 
-## BMI
 ```{r}
 # set na.action for dredge
 options(na.action = "na.fail")
+
+# specify number of cores to parallelization
+n_cores = 7
 ```
 
-### betas
+## BMI
+### ROIs
+#### run models
 ```{r}
-if (file.exists("bmi_sca_models_betas.RDS")) {
-  betas_combined = readRDS("bmi_sca_models_betas.RDS")
+# betas > rest
+if (file.exists("bmi_betas_rest_sca.RDS")) {
+  betas_rest_sca = readRDS("bmi_betas_rest_sca.RDS")
 } else {
-  # betas > rest
-  data = betas_rest %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(betas_rest, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = betas_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
+  
+  clust = parallel::makeCluster(getOption("cl.cores", n_cores))
+  invisible(parallel::clusterCall(clust, "library", character.only = TRUE))
+  parallel::clusterExport(clust, "data")
   
   betas_rest_sca = MuMIn::dredge(full_model, rank = "AIC", extra = "BIC")
+  parallel::stopCluster(clust)
   
-  # betas > nature
-  data = betas_nature %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(betas_nature, -c(subjectID, bmi, fat))), collapse = " + ")
+  saveRDS(betas_rest_sca, "bmi_betas_rest_sca.RDS")
+}
+
+# betas > nature
+if (file.exists("bmi_betas_nature_sca.RDS")) {
+  betas_nature_sca = readRDS("bmi_betas_nature_sca.RDS")
+} else {
+  data = betas_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
   
+  clust = parallel::makeCluster(getOption("cl.cores", n_cores))
+  invisible(parallel::clusterCall(clust, "library", character.only = TRUE))
+  parallel::clusterExport(clust, "data")
+  
   betas_nature_sca = MuMIn::dredge(full_model, rank = "AIC", extra = "BIC")
+  parallel::stopCluster(clust)
   
-  # combine models
-  betas_combined = bind_rows(betas_rest_sca, betas_nature_sca) %>%
-    select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
-    arrange(AIC)
-  
-  # save
-  saveRDS(betas_combined, "bmi_sca_models_betas.RDS")
+  saveRDS(betas_nature_sca, "bmi_betas_nature_sca.RDS")
 }
 ```
 
-```{r, fig.width=15, fig.height=15}
+#### combine models
+```{r}
+betas_combined = bind_rows(betas_rest_sca, betas_nature_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC)
+```
+
+#### plot rest and nature models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
 # set AIC for null model you want to compare model AIC values to
 null = betas_combined %>%
   arrange(df) %>%
@@ -287,28 +986,28 @@ null = betas_combined %>%
 
 # tidy for plotting
 plot_data = betas_combined %>%
-  filter(!(df == 2 & delta > .75)) %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
   arrange(AIC) %>%
-  #slice(1:10000) %>%
+  slice(1:20000) %>%
   mutate(specification = row_number(),
          better.fit = ifelse(AIC == null$AIC[1], "equal",
                       ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
   gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-  mutate(multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
-         cognitive_control = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
          reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
          value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
-         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
-         craving_regulation = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         balance = ifelse(grepl("balance", variable) & !is.na(val), 1, NA),
          rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
          nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
          snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
          food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
          meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
          dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
-         association_test = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
-         uniformity_test = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA)) %>%
-  select(-c(variable, val)) %>%
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("univariate", "", variable)) %>%
+  spread(variable, val) %>%
   unique()
 
 order = plot_data %>%
@@ -329,10 +1028,10 @@ a = plot_data %>%
   ggplot(aes(specification, AIC, color = better.fit)) +
     geom_point(shape = "|", size = 4, alpha = .1) +
     geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
-    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
     scale_y_continuous(breaks = scales::pretty_breaks(4)) +
     labs(x = "", y = "AIC\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
 # plot bottom panel
@@ -344,27 +1043,194 @@ plot_data_b = plot_data %>%
 b = plot_data_b %>%
   ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
     geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
-    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
     labs(x = "\nspecification number", y = "variables\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
-cowplot::plot_grid(a, b, ncol = 1, align = "v")
+cowplot::plot_grid(a, b, ncol = 1, align = "v", rel_heights = c(.33, .67))
 ```
 
-### dots
-```{r, eval = FALSE}
-# specify number of cores
-n_cores = 7
 
+#### plot rest models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = betas_rest_sca %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_rest = betas_rest_sca %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         balance = ifelse(grepl("balance", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("univariate", "", variable),
+         variable = gsub("rest", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order_rest = plot_data_rest %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_rest, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_rest = plot_data_rest %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_rest %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_rest, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_rest = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_rest, b_rest, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### plot nature models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = betas_nature_sca %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_nature = betas_nature_sca %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         balance = ifelse(grepl("balance", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("univariate", "", variable),
+         variable = gsub("nature", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+
+order_nature = plot_data_nature %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_nature, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_nature = plot_data_nature %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_nature %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_nature, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_nature = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_nature, b_nature, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### compare rest and nature curves
+* Plot the best fitting 20,000 models  
+* Rest = yellow
+* Nature = blue
+
+```{r}
+plot_data_rest %>%
+  ggplot(aes(specification, AIC)) +
+    geom_point(shape = "|", size = 4, alpha = .1, color = "#F2B827") +
+    geom_point(data = plot_data_nature, shape = "|", size = 4, alpha = .1, color = "#2E86B4") +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "\nspecification number", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+```
+
+### MAMs
+#### run models
+```{r}
 # dots association > rest
 if (file.exists("bmi_dots_rest_assoc_sca.RDS")) {
   dots_rest_assoc_sca = readRDS("bmi_dots_rest_assoc_sca.RDS")
 } else {
-  data = dots_rest_assoc %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_rest_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|association", names(.))) %>%
+    select_if(grepl("subjectID|bmi|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
@@ -384,10 +1250,10 @@ if (file.exists("bmi_dots_rest_assoc_sca.RDS")) {
 if (file.exists("bmi_dots_rest_uniform_sca.RDS")) {
   dots_rest_uniform_sca = readRDS("bmi_dots_rest_uniform_sca.RDS")
 } else {
-  data = dots_rest_uniform %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_rest_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|uniformity", names(.))) %>%
+    select_if(grepl("subjectID|bmi|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
@@ -407,10 +1273,10 @@ if (file.exists("bmi_dots_rest_uniform_sca.RDS")) {
 if (file.exists("bmi_dots_nature_assoc_sca.RDS")) {
   dots_nature_assoc_sca = readRDS("bmi_dots_nature_assoc_sca.RDS")
 } else {
-  data = dots_nature_assoc %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_nature_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|association", names(.))) %>%
+    select_if(grepl("subjectID|bmi|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
@@ -430,10 +1296,10 @@ if (file.exists("bmi_dots_nature_assoc_sca.RDS")) {
 if (file.exists("bmi_dots_nature_uniform_sca.RDS")) {
   dots_nature_uniform_sca = readRDS("bmi_dots_nature_uniform_sca.RDS")
 } else {
-  data = dots_nature_uniform %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_nature_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = dots_sca_bmi %>%
+    select_if(grepl("subjectID|bmi|uniformity", names(.))) %>%
+    select_if(grepl("subjectID|bmi|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
@@ -450,8 +1316,24 @@ if (file.exists("bmi_dots_nature_uniform_sca.RDS")) {
 }
 ```
 
+#### combine models
 ```{r}
-# combine models
+dots_assoc_combined = bind_rows(dots_rest_assoc_sca, dots_nature_assoc_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
+dots_uniform_combined = bind_rows(dots_rest_uniform_sca, dots_nature_uniform_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
+dots_rest_combined = bind_rows(dots_rest_assoc_sca, dots_rest_uniform_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
+dots_nature_combined = bind_rows(dots_nature_assoc_sca, dots_nature_uniform_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
 dots_combined = bind_rows(dots_rest_assoc_sca, dots_rest_uniform_sca, dots_nature_assoc_sca, dots_nature_uniform_sca) %>%
   select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
   arrange(AIC) 
@@ -460,42 +1342,42 @@ data_combined = bind_rows(betas_combined, dots_combined) %>%
   arrange(AIC)
 ```
 
-```{r}
-data_combined = readRDS("bmi_sca_models.RDS")
-```
+#### rest and nature models
+* Plot the best fitting 20,000 models  
 
-### combined plot
-```{r, fig.width=15, fig.height=10, eval = FALSE}
+```{r, fig.width=15, fig.height=19, cache=TRUE, cache=TRUE}
 # set AIC for null model you want to compare model AIC values to
-null = data_combined %>%
+null = dots_combined %>%
   arrange(df) %>%
   filter(df == 2)
 
 # tidy for plotting
-plot_data = data_combined %>%
-  filter(!(df == 2 & delta > .75)) %>%
+plot_data = dots_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
   arrange(AIC) %>%
-  slice(1:10000) %>%
+  slice(1:20000) %>%
   mutate(specification = row_number(),
          better.fit = ifelse(AIC == null$AIC[1], "equal",
                       ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
   gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-  mutate(ROI = ifelse(grepl("univariate", variable) & !is.na(val), 1, NA),
-         multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
-         cognitive_control = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
          reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
          value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
          craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
-         craving_regulation = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
          rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
          nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
          snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
          food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
          meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
          dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
-         association_test = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
-         uniformity_test = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA)) %>%
-  select(-c(variable, val)) %>%
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("multivariate", "", variable)) %>%
+  spread(variable, val) %>%
   unique()
 
 order = plot_data %>%
@@ -519,80 +1401,7 @@ a = plot_data %>%
     scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
     scale_y_continuous(breaks = scales::pretty_breaks(4)) +
     labs(x = "", y = "AIC\n") +
-    theme_minimal() +
-    theme(legend.position = "none")
-
-# plot bottom panel
-b = plot_data %>%
-  gather(variable, value, eval(variable_names)) %>%
-  left_join(., order, by = "variable") %>%
-  mutate(value = ifelse(!is.na(value), "|", ""),
-         variable = gsub("\\(Intercept\\)", "intercept", variable)) %>%
-  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
-    geom_text(aes(label = value), alpha = .1) +
-    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
-    labs(x = "\nspecification number", y = "variables\n") +
-    theme_minimal() +
-    theme(legend.position = "none")
-
-cowplot::plot_grid(a, b, ncol = 1, align = "v")
-```
-
-```{r, fig.width=15, fig.height=15}
-# set AIC for null model you want to compare model AIC values to
-null = data_combined %>%
-  arrange(df) %>%
-  filter(df == 2)
-
-# tidy for plotting
-plot_data = data_combined %>%
-  filter(!(df == 2 & delta > .75)) %>%
-  arrange(AIC) %>%
-  slice(1:10000) %>%
-  mutate(specification = row_number(),
-         better.fit = ifelse(AIC == null$AIC[1], "equal",
-                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
-  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-  mutate(ROI = ifelse(grepl("univariate", variable) & !is.na(val), 1, NA),
-         multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
-         cognitive_control = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
-         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
-         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
-         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
-         craving_regulation = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
-         rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
-         nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
-         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
-         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
-         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
-         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
-         association_test = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
-         uniformity_test = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA)) %>%
-  select(-c(variable, val)) %>%
-  unique()
-
-order = plot_data %>%
-  arrange(AIC) %>%
-  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
-  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
-  filter(!is.na(value)) %>%
-  group_by(variable) %>%
-  mutate(order = sum(better.fit.num)) %>%
-  select(variable, order) %>%
-  unique()
-
-# variables included in model
-variable_names = names(select(plot_data, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
-
-# plot top panel
-a = plot_data %>%
-  ggplot(aes(specification, AIC, color = better.fit)) +
-    geom_point(shape = "|", size = 4, alpha = .1) +
-    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
-    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
-    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
-    labs(x = "", y = "AIC\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
 # plot bottom panel
@@ -606,70 +1415,339 @@ b = plot_data_b %>%
     geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
     scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
     labs(x = "\nspecification number", y = "variables\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
-cowplot::plot_grid(a, b, ncol = 1, align = "v")
+cowplot::plot_grid(a, b, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### rest models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=19, cache=TRUE, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = dots_rest_combined %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_rest = dots_rest_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("rest", " ", variable),
+         variable = gsub("multivariate", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order_rest = plot_data_rest %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_rest, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_rest = plot_data_rest %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_rest %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_rest, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_rest = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_rest, b_rest, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### nature models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=19, cache=TRUE, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = dots_nature_combined %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_nature = dots_nature_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("nature", " ", variable),
+         variable = gsub("multivariate", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order_nature = plot_data_nature %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_nature, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_nature = plot_data_nature %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_nature %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_nature, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_nature = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_nature, b_nature, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### compare rest and nature curves
+* Plot the best fitting 20,000 models  
+* Rest = yellow
+* Nature = blue
+
+```{r}
+plot_data_rest %>%
+  ggplot(aes(specification, AIC)) +
+    geom_point(shape = "|", size = 4, alpha = .1, color = "#F2B827") +
+    geom_point(data = plot_data_nature, shape = "|", size = 4, alpha = .1, color = "#2E86B4") +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "\nspecification number", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+```
+
+### ROIs and MAMs plot
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=20}
+# set AIC for null model you want to compare model AIC values to
+null = data_combined %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data = data_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(ROI = ifelse(grepl("univariate", variable) & !is.na(val), 1, NA),
+         multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
+         `cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
+         nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+  
+order = plot_data %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a = plot_data %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("#F43C13")) + #"#5BBCD6", "black", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a, b, ncol = 1, align = "v", rel_heights = c(.33, .67))
 ```
 
 ### summarize number of better fitting models
 ```{r}
-# plot_data %>%
-#   gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-#   mutate(better.fit = ifelse(better.fit == "yes", 1, 0),
-#          var.better = ifelse(better.fit == 1 & !is.na(value), 1, 0),
-#          variable = gsub("\\(Intercept\\)", "intercept", variable),
-#          variable = gsub("health:", "health  x  ", variable),
-#          variable = gsub("health", "food type", variable)) %>%
-#   group_by(variable) %>%
-#   summarize(sum.var = sum(var.better, na.rm = TRUE),
-#             sum.all = sum(better.fit, na.rm = TRUE),
-#             percent = (sum.var / sum.all) * 100) %>%
-#   kable(format = "pandoc", digits = 2)
+plot_data %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(better.fit = ifelse(better.fit == "yes", 1, 0),
+         var.better = ifelse(better.fit == 1 & !is.na(value), 1, 0)) %>%
+  group_by(variable) %>%
+  summarize(sum.var = sum(var.better, na.rm = TRUE),
+            sum.all = sum(better.fit, na.rm = TRUE),
+            percent = (sum.var / sum.all) * 100) %>%
+  arrange(-percent) %>%
+  kable(format = "pandoc", digits = 2)
 ```
 
 ## % fat
-### betas
+### ROIs
+#### run models
 ```{r}
-if (file.exists("fat_sca_models_betas.RDS")) {
-  betas_combined = readRDS("fat_sca_models_betas.RDS")
+# betas > rest
+if (file.exists("fat_betas_rest_sca.RDS")) {
+  betas_rest_sca = readRDS("fat_betas_rest_sca.RDS")
 } else {
-  # betas > rest
-  data = betas_rest %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(betas_rest, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = betas_sca_fat %>%
+    select_if(grepl("subjectID|fat|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
+  
+  clust = parallel::makeCluster(getOption("cl.cores", n_cores))
+  invisible(parallel::clusterCall(clust, "library", character.only = TRUE))
+  parallel::clusterExport(clust, "data")
   
   betas_rest_sca = MuMIn::dredge(full_model, rank = "AIC", extra = "BIC")
+  parallel::stopCluster(clust)
   
-  # betas > nature
-  data = betas_nature %>%
-    select(-bmi) %>%
-    na.omit()
-  lm_predictors = paste(names(select(betas_nature, -c(subjectID, bmi, fat))), collapse = " + ")
+  saveRDS(betas_rest_sca, "fat_betas_rest_sca.RDS")
+}
+
+# betas > nature
+if (file.exists("fat_betas_nature_sca.RDS")) {
+  betas_nature_sca = readRDS("fat_betas_nature_sca.RDS")
+} else {
+  data = betas_sca_fat %>%
+    select_if(grepl("subjectID|fat|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
   
+  clust = parallel::makeCluster(getOption("cl.cores", n_cores))
+  invisible(parallel::clusterCall(clust, "library", character.only = TRUE))
+  parallel::clusterExport(clust, "data")
+  
   betas_nature_sca = MuMIn::dredge(full_model, rank = "AIC", extra = "BIC")
+  parallel::stopCluster(clust)
   
-  # combine models
-  betas_combined = bind_rows(betas_rest_sca, betas_nature_sca) %>%
-    select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
-    arrange(AIC)
-  
-  # save
-  saveRDS(betas_combined, "fat_sca_models_betas.RDS")
+  saveRDS(betas_nature_sca, "fat_betas_nature_sca.RDS")
 }
-
 ```
 
-```{r, fig.width=15, fig.height=15}
+#### combine models
+```{r}
+betas_combined = bind_rows(betas_rest_sca, betas_nature_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC)
+```
+
+#### rest and nature models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
 # set AIC for null model you want to compare model AIC values to
 null = betas_combined %>%
   arrange(df) %>%
@@ -677,28 +1755,28 @@ null = betas_combined %>%
 
 # tidy for plotting
 plot_data = betas_combined %>%
-  filter(!(df == 2 & delta > .75)) %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
   arrange(AIC) %>%
-  #slice(1:10000) %>%
+  slice(1:20000) %>%
   mutate(specification = row_number(),
          better.fit = ifelse(AIC == null$AIC[1], "equal",
                       ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
   gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-  mutate(multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
-         cognitive_control = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
          reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
          value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
-         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
-         craving_regulation = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         balance = ifelse(grepl("balance", variable) & !is.na(val), 1, NA),
          rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
          nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
          snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
          food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
          meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
          dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
-         association_test = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
-         uniformity_test = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA)) %>%
-  select(-c(variable, val)) %>%
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("univariate", "", variable)) %>%
+  spread(variable, val) %>%
   unique()
 
 order = plot_data %>%
@@ -719,10 +1797,10 @@ a = plot_data %>%
   ggplot(aes(specification, AIC, color = better.fit)) +
     geom_point(shape = "|", size = 4, alpha = .1) +
     geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
-    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) + 
     scale_y_continuous(breaks = scales::pretty_breaks(4)) +
     labs(x = "", y = "AIC\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
 # plot bottom panel
@@ -734,28 +1812,194 @@ plot_data_b = plot_data %>%
 b = plot_data_b %>%
   ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
     geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
-    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6"
     labs(x = "\nspecification number", y = "variables\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
-cowplot::plot_grid(a, b, ncol = 1, align = "v")
+cowplot::plot_grid(a, b, ncol = 1, align = "v", rel_heights = c(.33, .67))
 ```
 
-### dots
-```{r, eval = FALSE}
-# specify number of cores
-n_cores = 7
+#### rest models
+* Plot the best fitting 20,000 models  
 
+```{r, fig.width=15, fig.height=17, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = betas_rest_sca %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_rest = betas_rest_sca %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         balance = ifelse(grepl("balance", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("univariate", "", variable),
+         variable = gsub("rest", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order_rest = plot_data_rest %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_rest, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_rest = plot_data_rest %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) + 
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_rest %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_rest, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_rest = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_rest, b_rest, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### nature models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = betas_nature_sca %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_nature = betas_nature_sca %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         balance = ifelse(grepl("balance", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("univariate", "", variable),
+         variable = gsub("nature", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+
+order_nature = plot_data_nature %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_nature, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_nature = plot_data_nature %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) + 
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_nature %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_nature, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_nature = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_nature, b_nature, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### compare rest and nature curves
+* Plot the best fitting 20,000 models  
+* Rest = yellow
+* Nature = blue
+
+```{r}
+plot_data_rest %>%
+  ggplot(aes(specification, AIC)) +
+    geom_point(shape = "|", size = 4, alpha = .1, color = "#F2B827") +
+    geom_point(data = plot_data_nature, shape = "|", size = 4, alpha = .1, color = "#2E86B4") +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "\nspecification number", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+```
+
+### MAMs
+#### run models
+```{r}
 # dots association > rest
 if (file.exists("fat_dots_rest_assoc_sca.RDS")) {
   dots_rest_assoc_sca = readRDS("fat_dots_rest_assoc_sca.RDS")
 } else {
-  data = dots_rest_assoc %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_rest_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  data = dots_sca_fat %>%
+    select_if(grepl("subjectID|fat|association", names(.))) %>%
+    select_if(grepl("subjectID|fat|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
@@ -774,11 +2018,11 @@ if (file.exists("fat_dots_rest_assoc_sca.RDS")) {
 if (file.exists("fat_dots_rest_uniform_sca.RDS")) {
   dots_rest_uniform_sca = readRDS("fat_dots_rest_uniform_sca.RDS")
 } else {
-  data = dots_rest_uniform %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_rest_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  data = dots_sca_fat %>%
+    select_if(grepl("subjectID|fat|uniformity", names(.))) %>%
+    select_if(grepl("subjectID|fat|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
@@ -797,11 +2041,11 @@ if (file.exists("fat_dots_rest_uniform_sca.RDS")) {
 if (file.exists("fat_dots_nature_assoc_sca.RDS")) {
   dots_nature_assoc_sca = readRDS("fat_dots_nature_assoc_sca.RDS")
 } else {
-  data = dots_nature_assoc %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_nature_assoc, -c(subjectID, bmi, fat))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  data = dots_sca_fat %>%
+    select_if(grepl("subjectID|fat|association", names(.))) %>%
+    select_if(grepl("subjectID|fat|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
+  lm_formula = formula(paste0("fat ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
                   data = data)
@@ -820,10 +2064,10 @@ if (file.exists("fat_dots_nature_assoc_sca.RDS")) {
 if (file.exists("fat_dots_nature_uniform_sca.RDS")) {
   dots_nature_uniform_sca = readRDS("fat_dots_nature_uniform_sca.RDS")
 } else {
-  data = dots_nature_uniform %>%
-    select(-fat) %>%
-    na.omit()
-  lm_predictors = paste(names(select(dots_nature_uniform, -c(subjectID, bmi, fat))), collapse = " + ")
+  data = dots_sca_fat %>%
+    select_if(grepl("subjectID|fat|uniformity", names(.))) %>%
+    select_if(grepl("subjectID|fat|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, fat))), collapse = " + ")
   lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
   
   full_model = lm(lm_formula,
@@ -840,8 +2084,24 @@ if (file.exists("fat_dots_nature_uniform_sca.RDS")) {
 }
 ```
 
+#### combine models
 ```{r}
-# combine models
+dots_assoc_combined = bind_rows(dots_rest_assoc_sca, dots_nature_assoc_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
+dots_uniform_combined = bind_rows(dots_rest_uniform_sca, dots_nature_uniform_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
+dots_rest_combined = bind_rows(dots_rest_assoc_sca, dots_rest_uniform_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
+dots_nature_combined = bind_rows(dots_nature_assoc_sca, dots_nature_uniform_sca) %>%
+  select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
+  arrange(AIC) 
+
 dots_combined = bind_rows(dots_rest_assoc_sca, dots_rest_uniform_sca, dots_nature_assoc_sca, dots_nature_uniform_sca) %>%
   select(AIC, delta, BIC, df, logLik, weight, `(Intercept)`, everything()) %>%
   arrange(AIC) 
@@ -850,42 +2110,42 @@ data_combined = bind_rows(betas_combined, dots_combined) %>%
   arrange(AIC)
 ```
 
-```{r}
-data_combined = readRDS("bmi_sca_models.RDS")
-```
+#### rest and nature models
+* Plot the best fitting 20,000 models  
 
-### combined plot
-```{r, fig.width=15, fig.height=15, eval = FALSE}
+```{r, fig.width=15, fig.height=20, cache=TRUE}
 # set AIC for null model you want to compare model AIC values to
-null = data_combined %>%
+null = dots_combined %>%
   arrange(df) %>%
   filter(df == 2)
 
 # tidy for plotting
-plot_data = data_combined %>%
-  filter(!(df == 2 & delta > .75)) %>%
+plot_data = dots_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
   arrange(AIC) %>%
-  slice(1:10000) %>%
+  slice(1:20000) %>%
   mutate(specification = row_number(),
          better.fit = ifelse(AIC == null$AIC[1], "equal",
                       ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
   gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-  mutate(ROI = ifelse(grepl("univariate", variable) & !is.na(val), 1, NA),
-         multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
-         cognitive_control = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
          reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
          value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
          craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
-         craving_regulation = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
          rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
          nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
          snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
          food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
          meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
          dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
-         association_test = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
-         uniformity_test = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA)) %>%
-  select(-c(variable, val)) %>%
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("multivariate", "", variable)) %>%
+  spread(variable, val) %>%
   unique()
 
 order = plot_data %>%
@@ -909,7 +2169,7 @@ a = plot_data %>%
     scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
     scale_y_continuous(breaks = scales::pretty_breaks(4)) +
     labs(x = "", y = "AIC\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
 # plot bottom panel
@@ -923,24 +2183,276 @@ b = plot_data_b %>%
     geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
     scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
     labs(x = "\nspecification number", y = "variables\n") +
-    theme_minimal() +
+    theme_minimal(base_size = 14) +
     theme(legend.position = "none")
 
-cowplot::plot_grid(a, b, ncol = 1, align = "v")
+cowplot::plot_grid(a, b, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### rest models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = dots_rest_combined %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_rest = dots_rest_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("rest", " ", variable),
+         variable = gsub("multivariate", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order_rest = plot_data_rest %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_rest, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_rest = plot_data_rest %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_rest %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_rest, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_rest = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_rest, b_rest, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### nature models
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=15, fig.height=17, cache=TRUE}
+# set AIC for null model you want to compare model AIC values to
+null = dots_nature_combined %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data_nature = dots_nature_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(`cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable),
+         variable = gsub("nature", " ", variable),
+         variable = gsub("multivariate", "", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order_nature = plot_data_nature %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data_nature, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a_nature = plot_data_nature %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data_nature %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order_nature, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b_nature = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a_nature, b_nature, ncol = 1, align = "v", rel_heights = c(.33, .67))
+```
+
+#### compare rest and nature curves
+* Plot the best fitting 20,000 models  
+* Rest = yellow
+* Nature = blue
+
+```{r}
+plot_data_rest %>%
+  ggplot(aes(specification, AIC)) +
+    geom_point(shape = "|", size = 4, alpha = .1, color = "#F2B827") +
+    geom_point(data = plot_data_nature, shape = "|", size = 4, alpha = .1, color = "#2E86B4") +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "\nspecification number", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+```
+
+### ROIs and MAMs plot
+* Plot the best fitting 20,000 models  
+
+```{r, fig.width=17, fig.height=22}
+# set AIC for null model you want to compare model AIC values to
+null = data_combined %>%
+  arrange(df) %>%
+  filter(df == 2)
+
+# tidy for plotting
+plot_data = data_combined %>%
+  filter(!(df == 2 & delta %in% null$delta[-1])) %>%
+  select(-`(Intercept)`) %>%
+  arrange(AIC) %>%
+  slice(1:20000) %>%
+  mutate(specification = row_number(),
+         better.fit = ifelse(AIC == null$AIC[1], "equal",
+                      ifelse(AIC < null$AIC[1], "yes", "no"))) %>%
+  gather(variable, val, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(ROI = ifelse(grepl("univariate", variable) & !is.na(val), 1, NA),
+         multivariate = ifelse(grepl("multivariate", variable) & !is.na(val), 1, NA),
+         `cognitive control` = ifelse(grepl("cognitive_control", variable) & !is.na(val), 1, NA),
+         reward = ifelse(grepl("reward", variable) & !is.na(val), 1, NA),
+         value = ifelse(grepl("value", variable) & !is.na(val), 1, NA),
+         craving = ifelse(grepl("craving_a", variable) & !is.na(val), 1, NA),
+         `craving regulation` = ifelse(grepl("craving_regulation", variable) & !is.na(val), 1, NA),
+         rest = ifelse(grepl("rest", variable) & !is.na(val), 1, NA),
+         nature = ifelse(grepl("nature", variable) & !is.na(val), 1, NA),
+         snack = ifelse(grepl("snack", variable) & !is.na(val), 1, NA),
+         food = ifelse(grepl("food", variable) & !is.na(val), 1, NA),
+         meal = ifelse(grepl("meal", variable) & !is.na(val), 1, NA),
+         dessert = ifelse(grepl("dessert", variable) & !is.na(val), 1, NA),
+         `association test` = ifelse(grepl("association", variable) & !is.na(val), 1, NA),
+         `uniformity test` = ifelse(grepl("uniformity", variable) & !is.na(val), 1, NA),
+         variable = gsub("_$", "", variable),
+         variable = gsub("_", " ", variable)) %>%
+  spread(variable, val) %>%
+  unique()
+
+order = plot_data %>%
+  arrange(AIC) %>%
+  mutate(better.fit.num = ifelse(better.fit == "yes", 1, 0)) %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, starts_with("better"))) %>%
+  filter(!is.na(value)) %>%
+  group_by(variable) %>%
+  mutate(order = sum(better.fit.num)) %>%
+  select(variable, order) %>%
+  unique()
+
+# variables included in model
+variable_names = names(select(plot_data, -starts_with("better"), -specification, -AIC, -BIC, -df, -logLik, -delta, -weight))
+
+# plot top panel
+a = plot_data %>%
+  ggplot(aes(specification, AIC, color = better.fit)) +
+    geom_point(shape = "|", size = 4, alpha = .1) +
+    geom_hline(yintercept = null$AIC, linetype = "dashed", color = "#5BBCD6") +
+    scale_color_manual(values = c("#5BBCD6", "black", "#F43C13")) +
+    scale_y_continuous(breaks = scales::pretty_breaks(4)) +
+    labs(x = "", y = "AIC\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+# plot bottom panel
+plot_data_b = plot_data %>%
+  gather(variable, val, eval(variable_names)) %>%
+  left_join(., order, by = "variable") %>%
+  mutate(variable = gsub("\\(Intercept\\)", "intercept", variable))
+
+b = plot_data_b %>%
+  ggplot(aes(specification, reorder(variable, order), color = better.fit)) +
+    geom_point(data = subset(plot_data_b, !is.na(val)), alpha = .1, size = .25, position = position_jitter(width = 0.25, height = 0.25)) +
+    scale_color_manual(values = c("black", "#F43C13")) + #"#5BBCD6", 
+    labs(x = "\nspecification number", y = "variables\n") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+
+cowplot::plot_grid(a, b, ncol = 1, align = "v", rel_heights = c(.33, .67))
 ```
 
 ### summarize number of better fitting models
 ```{r}
-# plot_data %>%
-#   gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
-#   mutate(better.fit = ifelse(better.fit == "yes", 1, 0),
-#          var.better = ifelse(better.fit == 1 & !is.na(value), 1, 0),
-#          variable = gsub("\\(Intercept\\)", "intercept", variable),
-#          variable = gsub("health:", "health  x  ", variable),
-#          variable = gsub("health", "food type", variable)) %>%
-#   group_by(variable) %>%
-#   summarize(sum.var = sum(var.better, na.rm = TRUE),
-#             sum.all = sum(better.fit, na.rm = TRUE),
-#             percent = (sum.var / sum.all) * 100) %>%
-#   kable(format = "pandoc", digits = 2)
+plot_data %>%
+  gather(variable, value, -c(AIC, delta, BIC, df, logLik, weight, specification, better.fit)) %>%
+  mutate(better.fit = ifelse(better.fit == "yes", 1, 0),
+         var.better = ifelse(better.fit == 1 & !is.na(value), 1, 0)) %>%
+  group_by(variable) %>%
+  summarize(sum.var = sum(var.better, na.rm = TRUE),
+            sum.all = sum(better.fit, na.rm = TRUE),
+            percent = (sum.var / sum.all) * 100) %>%
+  arrange(-percent) %>%
+  kable(format = "pandoc", digits = 2)
 ```
+

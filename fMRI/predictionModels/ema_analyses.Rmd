@@ -1,0 +1,223 @@
+---
+title: "EMA Modeling"
+author: "Dani Cosme & Rich Lopez"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# load packages
+```{r}
+library(tidyverse)
+library(lmerTest)
+```
+
+# define palettes
+```{r}
+pal_process = wesanderson::wes_palette("Zissou1", 6, "continuous")
+```
+
+# source data
+```{r}
+source("load_data.R")
+```
+
+# standardize brain data
+```{r}
+# standardize and winsorize
+betas_std = betas %>%
+  group_by(roi, session) %>%
+  mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
+         meanPE_std = ifelse(meanPE_std > 3, 3,
+                      ifelse(meanPE_std < -3, -3, meanPE_std))) %>%
+  ungroup()
+
+dots_std = dots %>%
+  group_by(map, test, mask, session) %>%
+  mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
+         dotProduct_std = ifelse(dotProduct_std > 3, 3,
+                          ifelse(dotProduct_std < -3, -3, dotProduct_std))) %>%
+  ungroup()
+
+# join data frames
+dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
+  mutate(subjectID = as.character(subjectID)) %>%
+  left_join(., ind_diffs, by = c("subjectID")) %>%
+  ungroup() %>%
+  mutate(subjectID = as.factor(subjectID),
+         condition = as.factor(condition),
+         control = as.factor(control),
+         roi = as.factor(roi),
+         process = as.factor(process),
+         test = as.factor(test))
+```
+
+# tidy data
+* grand-mean center neuro variables
+
+```{r}
+model_data = dataset %>%
+  filter(((!grepl("neuralsig", map) & test == "association" & mask == "masked") | (grepl("neuralsig", map) & mask == "unmasked")) & 
+           session == "all" & control == "nature" & condition == "snack") %>%
+  unique() %>%
+  group_by(process, subjectID) %>%
+  mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE),
+         processPE = paste0(process, "PE")) %>%
+  select(-c(xyz, meanPE, meanPE_std, sdPE, dotProduct, map)) %>%
+  spread(process, dotProduct_std) %>%
+  spread(processPE, meanProcessPEstd) %>%
+  group_by(subjectID) %>%
+  fill(everything(), .direction = "down") %>%
+  fill(everything(), .direction = "up") %>%
+  select(-c(roi, cravingPE, craving_regulationPE, test, age, gender, mask)) %>%
+  unique() %>%
+  mutate(balancePE = cognitive_controlPE - rewardPE) %>%
+  select(-c(session, con, condition, control, DBIC_ID)) %>%
+  gather(var, val, -c(subjectID, sample, bmi, fat)) %>%
+  group_by(var) %>%
+  mutate(val_c = scale(val, center = TRUE, scale = FALSE)) %>%
+  select(-val) %>%
+  ungroup() %>%
+  mutate(var = paste0(var, "_gm")) %>%
+  spread(var, val_c) %>%
+  right_join(., ema, by = c("subjectID", "bmi", "fat"))
+```
+
+# visualize
+## ROIs
+```{r, fig.width=8, fig.height=5}
+model_data %>%
+  select(subjectID, contains("PE_gm"), desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m) %>%
+  unique() %>%
+  gather(neuro_var, neuro_val, contains("gm")) %>%
+  mutate(neuro_var = factor(neuro_var, levels = c("balancePE_gm", "cognitive_controlPE_gm", "rewardPE_gm", "valuePE_gm"))) %>%  gather(ema_var, ema_val, contains("m"), contains("prop")) %>%
+  group_by(ema_var) %>%
+  do({
+    plot = ggplot(., aes(neuro_val, ema_val, color = neuro_var)) +
+      geom_point(alpha = .5) +
+      geom_smooth(method = "lm", , alpha = .1) +
+      scale_color_manual(name = "", values = pal_process) +
+      labs(x = "\n mean parameter estimate", y = paste0(.$ema_var[[1]], "\n")) +
+      theme_minimal(base_size = 14)
+    
+    print(plot)
+    data.frame()
+  })
+
+```
+
+## MAMs
+```{r, fig.width=8, fig.height=5}
+model_data %>%
+  select(subjectID, contains("_gm"), -contains("PE"), desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m) %>%
+  unique() %>%
+  gather(neuro_var, neuro_val, contains("gm")) %>%
+  mutate(neuro_var = factor(neuro_var, levels = c("cognitive_control_gm", "reward_gm", "value_gm",
+                                                  "craving_gm", "craving_regulation_gm"))) %>%
+  gather(ema_var, ema_val, contains("m"), contains("prop")) %>%
+  group_by(ema_var) %>%
+  do({
+    plot = ggplot(., aes(neuro_val, ema_val, color = neuro_var)) +
+      geom_point(alpha = .5) +
+      geom_smooth(method = "lm", , alpha = .1) +
+      scale_color_manual(name = "", values = pal_process[2:6]) +
+      labs(x = "\n mean parameter estimate", y = paste0(.$ema_var[[1]], "\n")) +
+      theme_minimal(base_size = 14)
+    
+    print(plot)
+    data.frame()
+  })
+
+```
+
+# run MLM models
+## desire presence
+```{r}
+model_desire_yn = glmer(desire_pres0 ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      family = binomial,
+                      data = model_data,
+                      na.action = "na.exclude")
+summary(model_desire_yn)
+```
+
+## desire strength
+```{r}
+model_desire = lmer(desire_str ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      data = model_data,
+                      na.action = "na.exclude")
+
+summary(model_desire)
+```
+
+## goal conflict
+```{r}
+model_goal_conflict = lmer(goal_conf ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      data = model_data,
+                      na.action = "na.exclude")
+
+summary(model_goal_conflict)
+```
+
+## resistance
+```{r}
+model_resist = lmer(resist ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      data = model_data,
+                      na.action = "na.exclude")
+
+summary(model_resist)
+```
+
+## enactment
+```{r}
+model_enact = glmer(enact ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      family = binomial,
+                      data = model_data,
+                      na.action = "na.exclude")
+summary(model_enact)
+```
+
+## amount eaten
+```{r}
+model_amount = lmer(amount ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      data = model_data,
+                      na.action = "na.exclude")
+
+summary(model_amount)
+```
+
+## hunger
+```{r}
+model_hunger = lmer(hunger ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
+                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
+                      (1 | subjectID),
+                      data = model_data,
+                      na.action = "na.exclude")
+
+summary(model_hunger)
+```
