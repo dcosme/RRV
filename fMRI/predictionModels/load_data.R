@@ -121,6 +121,12 @@ ema = read.csv("EMA_data.csv") %>%
   rename("subjectID" = RRVID) %>%
   select(-c(key, SSID, subID, SAMPLE, control))
 
+ema_enact = ema %>%
+  mutate(subjectID = as.character(subjectID)) %>%
+  select(subjectID, enact_prop) %>%
+  unique() %>%
+  filter(!is.na(subjectID))
+
 # load outcomes
 ind_diffs = read.csv("individual_diffs_outcomes.csv") %>%
   rename("subjectID" = RRV_ID_NEW,
