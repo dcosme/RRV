@@ -15,7 +15,7 @@ dots_std = dots %>%
 # SCA
 ## tidy data
 dots_sca = dots_std %>%
-  filter((!grepl("neuralsig", map) &  mask == "masked") | (grepl("neuralsig", map) & mask == "unmasked")) %>%
+  filter(mask == "unmasked") %>%
   unite(variable, process, test, condition, control, sep = "_", remove = TRUE) %>%
   mutate(variable = sprintf("multivariate_%s", variable)) %>%
   filter(session == "all") %>%
