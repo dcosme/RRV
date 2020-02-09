@@ -9,7 +9,7 @@ betas_std = betas %>%
   group_by(roi, session) %>%
   mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
          meanPE_std = ifelse(meanPE_std > 3, 3,
-                      ifelse(meanPE_std < -3, -3, meanPE_std))) %>%
+                             ifelse(meanPE_std < -3, -3, meanPE_std))) %>%
   ungroup()
 
 # SCA
@@ -26,12 +26,13 @@ betas_sca = betas_std %>%
   filter(session == "all") %>%
   select(-c(session)) %>%
   left_join(., ind_diffs) %>%
+  left_join(., ema_enact) %>%
   select(-c(sample, DBIC_ID, age, gender))
 
-betas_sca_bmi = betas_sca %>%
+betas_sca_enact = betas_sca %>%
   filter(grepl("snack|meal|dessert|food", variable)) %>%
   unique() %>%
-  select(-fat) %>%
+  select(-c(fat, bmi)) %>%
   spread(variable, meanProcessPEstd) %>%
   ungroup() %>%
   na.omit()
@@ -43,13 +44,13 @@ options(na.action = "na.fail")
 n_cores = 28
 
 # betas > rest
-if (file.exists("bmi_betas_rest_sca.RDS")) {
-  betas_rest_sca = readRDS("bmi_betas_rest_sca.RDS")
+if (file.exists("enact_betas_rest_sca.RDS")) {
+  betas_rest_sca = readRDS("enact_betas_rest_sca.RDS")
 } else {
-  data = betas_sca_bmi %>%
-    select_if(grepl("subjectID|bmi|rest", names(.)))
-  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  data = betas_sca_enact %>%
+    select_if(grepl("subjectID|enact|rest", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, enact_prop))), collapse = " + ")
+  lm_formula = formula(paste0("enact_prop ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)
@@ -61,17 +62,17 @@ if (file.exists("bmi_betas_rest_sca.RDS")) {
   betas_rest_sca = MuMIn::dredge(full_model, rank = "AIC", extra = "BIC")
   parallel::stopCluster(clust)
 
-  saveRDS(betas_rest_sca, "bmi_betas_rest_sca.RDS")
+  saveRDS(betas_rest_sca, "enact_betas_rest_sca.RDS")
 }
 
 # betas > nature
-if (file.exists("bmi_betas_nature_sca.RDS")) {
-  betas_nature_sca = readRDS("bmi_betas_nature_sca.RDS")
+if (file.exists("enact_betas_nature_sca.RDS")) {
+  betas_nature_sca = readRDS("enact_betas_nature_sca.RDS")
 } else {
-  data = betas_sca_bmi %>%
-    select_if(grepl("subjectID|bmi|nature", names(.)))
-  lm_predictors = paste(names(select(data, -c(subjectID, bmi))), collapse = " + ")
-  lm_formula = formula(paste0("bmi ~ ", lm_predictors, collapse = " + "))
+  data = betas_sca_enact %>%
+    select_if(grepl("subjectID|enact|nature", names(.)))
+  lm_predictors = paste(names(select(data, -c(subjectID, enact_prop))), collapse = " + ")
+  lm_formula = formula(paste0("enact_prop ~ ", lm_predictors, collapse = " + "))
 
   full_model = lm(lm_formula,
                   data = data)
@@ -83,5 +84,5 @@ if (file.exists("bmi_betas_nature_sca.RDS")) {
   betas_nature_sca = MuMIn::dredge(full_model, rank = "AIC", extra = "BIC")
   parallel::stopCluster(clust)
 
-  saveRDS(betas_nature_sca, "bmi_betas_nature_sca.RDS")
+  saveRDS(betas_nature_sca, "enact_betas_nature_sca.RDS")
 }

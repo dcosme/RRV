@@ -20,8 +20,7 @@ betas_sca = betas_std %>%
   select(-c(con, xyz, roi, meanPE, sdPE, meanPE_std)) %>%
   unique() %>%
   spread(process, meanProcessPEstd) %>%
-  mutate(balance = cognitive_control - reward) %>%
-  gather(process, meanProcessPEstd, cognitive_control, reward, value, balance) %>%
+  gather(process, meanProcessPEstd, cognitive_control, reward, value) %>%
   unite(variable, process, condition, control, sep = "_", remove = TRUE) %>%
   mutate(variable = sprintf("univariate_%s", variable)) %>%
   filter(session == "all") %>%
