@@ -1,0 +1,998 @@
+---
+title: "Model Comparison SCAs specr"
+author: "Dani Cosme"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, cache.lazy = FALSE, fig.path = "figs/SCA/")
+```
+
+# load packages
+```{r}
+library(tidyverse)
+library(knitr)
+devtools::install_github("dcosme/specr", ref = "plotmods")
+library(specr)
+```
+
+# define palettes
+```{r}
+pal_outcome = wesanderson::wes_palette("Zissou1", 3, "continuous")
+pal_sca = c(pal_outcome[3], pal_outcome[3], "grey")
+pal_condition = wesanderson::wes_palette("Zissou1", 16, "continuous")
+pal_condition = c(pal_condition[1], pal_condition[3],
+                  pal_condition[14], pal_condition[5],
+                  pal_condition[15], pal_condition[16],
+                  pal_condition[9], pal_condition[12])
+```
+
+# set seed
+```{r}
+set.seed(6523)
+```
+
+# define SCA wrapper functions
+## plot functions
+```{r}
+plot_sca = function(data, combined = TRUE, labels = c("A", "B"), title = FALSE, limits = NULL,
+                    point_size = 1, point_alpha = 1, ci_alpha = .5, ci_size = .5, 
+                    text_size = 14, title_size = 6,
+                    choices  = c("x", "y", "test", "stimulus", "contrast", "controls"),
+                    remove_y = FALSE, remove_facet = FALSE) {
+  
+  if (combined == TRUE) {
+      p1 = plot_curve(data, point_size = point_size, point_alpha = point_alpha,
+                      ci_alpha = ci_alpha, ci_size = ci_size,
+                      limits = limits) +
+        geom_hline(aes(yintercept = median(filter(data, y == "body fat percentage")$estimate), linetype = "body fat percentage"), color = pal_outcome[1], size = 1) +
+        geom_hline(aes(yintercept = median(filter(data, y == "BMI")$estimate), linetype = "BMI"), color = pal_outcome[2], size = 1) +
+        geom_hline(aes(yintercept = median(filter(data, y == "enactment")$estimate), linetype = "enactment"), color = pal_outcome[3], size = 1) +
+        scale_linetype_manual(name = "", values = c(2, 2, 2), guide = guide_legend(override.aes = list(color = c(pal_outcome[1], pal_outcome[2], pal_outcome[3])))) +
+        labs(x = "", y = "standarized\nregression coefficient\n")  +
+        theme(legend.position = "top",
+              text = element_text(size = text_size))
+      
+      if (title == TRUE) {
+        if (is.null(limits)) {
+          p1 = p1 + annotate("text", -Inf, Inf, label = unique(data$x), fontface = 2, size = title_size,
+                       x = 0.5*(1 + nrow(data)), 
+                       y = max(data$conf.high))
+        } else {
+          p1 = p1 + annotate("text", -Inf, Inf, label = unique(data$x), fontface = 2, size = title_size,
+                       x = 0.5*(1 + nrow(data)), 
+                       y = limits[2])
+        }
+      }
+      
+      p2 = plot_choices(data, choices = choices,
+                        ignore_vars = c("ROI", "neural signature"), rename_controls = "covariates") +
+        labs(x = "\nspecifications (ranked)")  +
+        theme(strip.text.x = element_blank(),
+              text = element_text(size = text_size))
+        
+  }
+  else {
+      p1 = plot_curve(data, point_size = point_size, point_alpha = point_alpha,
+                      ci_alpha = ci_alpha, ci_size = ci_size) +
+        geom_hline(yintercept = 0, linetype = "solid", color = "black", size = .5) +
+        labs(x = "", y = "standarized\nregression coefficient\n") +
+        theme(text = element_text(size = text_size))
+      
+      if (title == TRUE) {
+        if (is.null(limits)) {
+          p1 = p1 + annotate("text", -Inf, Inf, label = unique(data$y), fontface = 2, size = title_size,
+                       x = 0.5*(1 + nrow(data)), 
+                       y = max(data$conf.high))
+        } else {
+          p1 = p1 + annotate("text", -Inf, Inf, label = unique(data$y), fontface = 2, size = title_size,
+                       x = 0.5*(1 + nrow(data)), 
+                       y = limits[2])
+        }
+      }
+      
+      p2 = plot_choices(data, choices = choices,
+                        ignore_vars = c("ROI", "neural signature", "not included"), rename_controls = "covariates") +
+        labs(x = "\nspecification number (ranked)") +
+        theme(strip.text.x = element_blank(),
+              text = element_text(size = text_size))
+  }
+  
+  if (remove_y == TRUE) {
+    p1 = p1 + labs(y = "")
+    
+    p2 = p2 + theme(axis.text.y = element_blank(),
+                    axis.ticks.y = element_blank()) +
+      labs(y = "")
+  }
+
+  if (remove_facet == TRUE) {
+    p2 = p2 + theme(strip.text.y = element_blank())
+    }
+  
+  plot_specs(plot_a = p1,
+             plot_b = p2,
+             labels = labels,
+             rel_height = c(1, 2))
+}
+
+plot_sca_compare = function(data, pointrange = TRUE, labels = c("A", "B"), 
+                            rel_heights = c(.75, .25), rel_widths = c(.75, .25), 
+                            title = FALSE, text_size = 14, title_size = 6, n_rows = 1,
+                            remove_x = FALSE, remove_y = FALSE, sig = NULL) {
+  
+  # define median bootstrapping function
+  median_cl_boot = function(x, conf = 0.95, df = TRUE, ci = "low") {
+  
+    lconf = (1 - conf)/2
+    uconf = 1 - lconf
+    require(boot)
+    bmedian = function(x, ind) median(x[ind])
+    bt = boot(x, bmedian, 1000)
+    bb = boot.ci(bt, type = "perc")
+    
+    if (df == TRUE){
+      data.frame(y = median(x),
+                 ymin = quantile(bt$t, lconf), 
+                 ymax = quantile(bt$t, uconf))
+      
+    } else {
+      if (ci == "low") {
+        quantile(bt$t, lconf)
+      } else {
+        quantile(bt$t, uconf)
+      }
+    }
+  }
+    
+  # merge and tidy for plotting
+  plot.data = data %>%
+    group_by(x) %>%
+    arrange(estimate) %>%
+    mutate(specification = row_number()) %>%
+    ungroup() %>%
+    unique()
+  
+  # labels
+  labs = plot.data %>%
+    group_by(x) %>%
+    summarize(med = median(estimate),
+              low = median_cl_boot(estimate, df = FALSE, ci = "low"),
+              high = median_cl_boot(estimate, df = FALSE, ci = "high")) %>%
+    mutate(range = max(high) - min(low),
+           estimate = ifelse(med > 0, high + (range / 10), low - (range / 10)),
+           label = ifelse(x %in% sig, "*", ""))
+  
+  # plot curves
+  if (pointrange == TRUE) {
+    a = plot.data %>%
+    ggplot(aes(specification, estimate, color = x)) +
+      geom_linerange(aes(ymin = conf.low, ymax = conf.high), size = .1) +
+      geom_point() +
+      geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 1) +
+      scale_color_manual(name = "", values = pal_condition) +
+      labs(x = "\nspecification number (ranked)", y = "standarized\negression coefficient\n") + 
+      theme_minimal() + 
+      theme(strip.text = element_blank(), 
+            axis.line = element_line("black", size = 0.5), 
+            legend.position = c(.5, .1), 
+            legend.direction = "horizontal",
+            panel.spacing = unit(0.75, "lines"), 
+            axis.text = element_text(colour = "black"),
+            text = element_text(size = text_size))
+    if (title == TRUE) {
+      a = a + annotate("text", -Inf, Inf, label = unique(plot.data$y), fontface = 2, size = title_size,
+                       x = 0.5*(min(plot.data$specification) + max(plot.data$specification)), 
+                       y = max(plot.data$conf.high))
+    }
+    
+  } else {
+    a = plot.data %>%
+      ggplot(aes(specification, estimate, color = x)) +
+      geom_point() +
+      geom_hline(yintercept = 0, linetype = "solid", color = "black", size = 1) +
+      scale_color_manual(name = "", values = pal_condition) +
+      labs(x = "\nspecification number (ranked)", y = "standarized\nregression coefficient\n") + 
+      theme_minimal() + 
+      theme(strip.text = element_blank(), 
+            axis.line = element_line("black", size = 0.5), 
+            legend.position = "none", 
+            legend.direction = "horizontal",
+            panel.spacing = unit(0.75, "lines"), 
+            axis.text = element_text(colour = "black"),
+            text = element_text(size = text_size))
+    if (title == TRUE) {
+      a = a + annotate("text", -Inf, Inf, label = unique(plot.data$y), fontface = 2, size = title_size,
+                       x = 0.5*(min(plot.data$specification) + max(plot.data$specification)), 
+                       y = max(plot.data$estimate))    
+      }
+  }
+  
+    b = plot.data %>%
+      group_by(x) %>%
+      mutate(order = median(estimate)) %>%
+      ggplot(aes(reorder(x, order), estimate, fill = x)) +
+      stat_summary(fun.y = "median", geom = "bar") +
+      stat_summary(fun.data = median_cl_boot, geom = "errorbar", width = 0) +
+      geom_text(data = labs, aes(label = label, x = x, y = estimate), size = 6) +
+      scale_fill_manual(name = "", values = pal_condition) +
+      scale_y_continuous(breaks = scales::pretty_breaks(n = 4)) + 
+      labs(x = "\n", y = "median effect\n") + 
+      theme_minimal() + 
+      theme(strip.text = element_blank(), 
+            axis.line = element_line("black", size = 0.5), 
+            legend.position = "none", 
+            panel.spacing = unit(0.75, "lines"), 
+            axis.text = element_text(colour = "black"),
+            text = element_text(size = text_size),
+            axis.text.x = element_text(angle = 45, hjust = 1))
+    
+  if (n_rows == 1) {
+    a = a + theme(legend.position = c(.5, .1))
+    b = b + coord_flip() +
+      labs(x = "\n", y = "\nmedian effect") + 
+      theme(axis.text.x = element_text(angle = 0, hjust = 1),
+            axis.text.y = element_blank())
+  }     
+    
+
+  if (remove_x == TRUE) {
+    a = a + labs(x = "")
+    
+    if (n_rows == 1) {
+      b = b + labs(y = "")
+    } else {
+      b = b + labs(x = "")
+    }
+  }    
+  
+  if (remove_y == TRUE) {
+    a = a + labs(y = "")
+    
+    if (n_rows == 1) {
+      b = b + labs(x = "")
+    } else {
+      b = b + labs(y = "")
+    }
+  }  
+    
+  cowplot::plot_grid(a, b, labels = labels, rel_heights = rel_heights, rel_widths = rel_widths, nrow = n_rows)
+}
+```
+
+
+## summary and bootstapping functions
+
+Process overview  
+
+* shuffle `value-std` before spreading  
+* run SCA with shuffled values  
+* extract median estimate, % positive (& significant p < .05), % negative (& signiticant p < .05)  
+* repeat process 500 times  
+
+```{r}
+
+run_boot = function(data, var, n_shuffles, rerun) {
+  
+  if (rerun == FALSE & file.exists(sprintf("boot/boot_%s.RDS", var))) {
+    out = readRDS(sprintf("boot/boot_%s.RDS", var))
+  } else {
+    out = sca_boot(data = data_combined, var = var, n_shuffles = n_shuffles)
+    saveRDS(out, sprintf("boot/boot_%s.RDS", var))
+  }
+  return(out)
+  
+}
+
+sca_boot = function(data, var, n_shuffles) {
+  
+  # set seed
+  set.seed(63)
+  
+  # initialize data frame
+  df = data.frame()
+  
+  for (i in 1:n_shuffles){
+    # shuffle `value-std`
+    data_shuffled = data %>%
+      mutate(shuffled = sample(value_std)) %>%
+      select(-value_std)
+    
+    # separate uniformity and association data
+    data1_shuffled = data_shuffled %>%
+      filter(grepl("uniformity|ROI", test)) %>%
+      select(-test) %>%
+      spread(process, shuffled)
+    
+    data2_shuffled = data_shuffled %>%
+      filter(grepl("association|ROI", test)) %>%
+      select(-test) %>%
+      spread(process, shuffled)
+    
+    # define control variables
+    controls = unique(data_shuffled$process)[unique(data_shuffled$process) != var]
+      
+    # run scas
+    results_data1 = run_specs(df = data1_shuffled,
+                              y = c("bmi", "fat", "enact_prop"), 
+                              x = var,
+                              controls = controls,
+                              model = c("lm"), 
+                              subsets = list(stimulus = unique(data1_shuffled$stimulus),
+                                             contrast = unique(data1_shuffled$contrast))) %>%
+      mutate(test = ifelse(grepl("ROI", controls), "ROI", 
+                    ifelse(grepl("ROI", x) & grepl("no covariates", controls), "ROI", 
+                    ifelse(controls == "craving_regulation_PEV", "neural signature",     
+                    ifelse(grepl("craving_regulation", x) & grepl("no covariates", controls), "neural signature", "uniformity")))))
+    
+    results_data2 = run_specs(df = data2_shuffled,
+                              y = c("bmi", "fat", "enact_prop"), 
+                              x = var,
+                              controls = controls,
+                              model = c("lm"), 
+                              subsets = list(stimulus = unique(data2_shuffled$stimulus),
+                                             contrast = unique(data2_shuffled$contrast))) %>%
+      mutate(test = ifelse(grepl("ROI", controls), "ROI", 
+                    ifelse(grepl("ROI", x) & grepl("no covariates", controls), "ROI", 
+                    ifelse(controls == "craving_regulation_PEV", "neural signature",     
+                    ifelse(grepl("craving_regulation", x) & grepl("no covariates", controls), "neural signature", "association")))))
+    
+    # merge and extract info
+    results = bind_rows(results_data1, results_data2) %>%
+      mutate(duplicated = ifelse(duplicated(estimate) & duplicated(std.error), 1, 0)) %>%
+      filter(!duplicated) %>%
+      unique() %>%
+      ungroup() %>%
+      mutate(pos = ifelse(estimate > 0, 1, 0),
+             neg = ifelse(estimate < 0, 1, 0),
+             sig = ifelse(p.value < .05, 1, 0),
+             pos_sig = ifelse(pos == 1 & sig == 1, 1, 0),
+             neg_sig = ifelse(neg == 1 & sig == 1, 1, 0)) %>%
+      group_by(x, y) %>%
+      summarize(median = median(estimate),
+                n = n(),
+                n_positive = sum(pos),
+                n_negative = sum(neg),
+                n_significant = sum(sig),
+                n_positive_sig = sum(pos_sig),
+                n_negative_sig = sum(neg_sig)) %>%
+      mutate(shuffle = i) %>%
+      select(shuffle, everything()) %>%
+      ungroup() %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "enact_prop", replacement = "enactment") %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "bmi", replacement = "BMI") %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "fat", replacement = "body fat percentage") %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "_", replacement = " ")
+  
+    # join to data frame
+    df = rbind(df, as.data.frame(results))
+    rm(results)
+    
+  }
+  
+  return(df)
+  
+}
+
+run_sca = function(data, var, outcome, boot = FALSE, n_shuffles = 1, rerun = FALSE) {
+  
+    # define median bootstrapping function
+    median_cl_boot = function(estimate, conf = 0.95) {
+  
+      lconf = (1 - conf)/2
+      uconf = 1 - lconf
+      require(boot)
+      bmedian = function(estimate, ind) median(estimate[ind])
+      bt = boot(estimate, bmedian, 1000)
+      bb = boot.ci(bt, type = "perc")
+      data.frame(obs_median = median(estimate), 
+                 obs_conf_low = quantile(bt$t, lconf), 
+                 obs_conf_high = quantile(bt$t, uconf))
+    
+    }
+    
+    # separate uniformity and association data
+    data1 = data %>%
+      filter(grepl("uniformity|ROI", test)) %>%
+      select(-test) %>%
+      spread(process, value_std)
+    
+    data2 = data %>%
+      filter(grepl("association|ROI", test)) %>%
+      select(-test) %>%
+      spread(process, value_std)
+    
+    # define control variables
+    if (length(var) > 1) {
+      controls = unique(data$process)
+    } else {
+      controls = unique(data$process)[!unique(data$process) %in% var]
+    }
+      
+    # run scas
+    results_data1 = run_specs(df = data1,
+                              y = outcome, 
+                              x = var,
+                              controls = controls,
+                              model = c("lm"), 
+                              subsets = list(stimulus = unique(data1$stimulus),
+                                             contrast = unique(data1$contrast))) %>%
+      mutate(test = ifelse(grepl("ROI", controls), "ROI", 
+                    ifelse(grepl("ROI", x) & grepl("no covariates", controls), "ROI", 
+                    ifelse(controls == "craving_regulation_PEV", "neural signature",     
+                    ifelse(grepl("craving_regulation", x) & grepl("no covariates", controls), "neural signature", "uniformity")))))
+    
+    results_data2 = run_specs(df = data2,
+                              y = outcome, 
+                              x = var,
+                              controls = controls,
+                              model = c("lm"), 
+                              subsets = list(stimulus = unique(data2$stimulus),
+                                             contrast = unique(data2$contrast)))  %>%
+      mutate(test = ifelse(grepl("ROI", controls), "ROI", 
+                    ifelse(grepl("ROI", x) & grepl("no covariates", controls), "ROI", 
+                    ifelse(controls == "craving_regulation_PEV", "neural signature",     
+                    ifelse(grepl("craving_regulation", x) & grepl("no covariates", controls), "neural signature", "association")))))
+    
+    # merge and extract info & exclude duplicates
+    results = bind_rows(results_data1, results_data2) %>%
+      filter(!x == controls) %>%
+      mutate(stimulus = ifelse(grepl("snack", subsets), "snack",
+                        ifelse(grepl("meal", subsets), "meal",
+                        ifelse(grepl("dessert", subsets), "dessert",
+                        ifelse(grepl("food", subsets), "food", "all")))),
+             contrast = ifelse(grepl("nature", subsets), "nature",
+                        ifelse(grepl("rest", subsets), "rest", "all")),
+             duplicated = ifelse(duplicated(estimate) & duplicated(std.error), 1, 0)) %>%
+      filter(!duplicated) %>%
+      unique() %>%
+      ungroup() %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "enact_prop", replacement = "enactment") %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "bmi", replacement = "BMI") %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "fat", replacement = "body fat percentage") %>%
+      mutate_if(is.character, stringr::str_replace_all, pattern = "_", replacement = " ")
+    
+    median_ci = results %>%
+      group_by(x, y) %>%
+      do({
+        median_cl_boot(.$estimate)
+      })
+        
+    summary = results %>%
+      mutate(pos = ifelse(estimate > 0, 1, 0),
+             neg = ifelse(estimate < 0, 1, 0),
+             sig = ifelse(p.value < .05, 1, 0),
+             pos_sig = ifelse(pos == 1 & sig == 1, 1, 0),
+             neg_sig = ifelse(neg == 1 & sig == 1, 1, 0)) %>%
+      group_by(x, y) %>%
+      summarize(obs_n = n(),
+                obs_n_positive = sum(pos),
+                obs_n_negative = sum(neg),
+                obs_n_significant = sum(sig),
+                obs_n_positive_sig = sum(pos_sig),
+                obs_n_negative_sig = sum(neg_sig)) %>%
+      left_join(., median_ci, by = c("x", "y")) %>%
+      select(x, y, obs_median, obs_conf_low, obs_conf_high, everything())
+      
+
+  
+    if (boot == TRUE) {
+      boot_out = run_boot(data, var, n_shuffles, rerun)
+      return(list(results = results, summary = summary, boot = boot_out))
+    } else {
+      return(list(results = results, summary = summary))
+    }
+    
+}
+
+boot_stats = function(data) {
+  
+  data$boot %>%
+    mutate(y = ifelse(grepl("%", y), "body fat percentage", y)) %>%
+    left_join(., data$summary, c("x", "y")) %>%
+    mutate(extreme_median = ifelse(obs_median > 0 & median >= obs_median, 1,
+                            ifelse(obs_median < 0 & median <= obs_median, 1, 0)),
+           extreme_positive = ifelse(n_positive >= obs_n_positive, 1, 0),
+           extreme_negative = ifelse(n_negative >= obs_n_negative, 1, 0),
+           extreme_positive_sig = ifelse(n_positive_sig >= obs_n_positive_sig, 1, 0),
+           extreme_negative_sig = ifelse(n_negative_sig >= obs_n_negative_sig, 1, 0)) %>%
+    group_by(x, y) %>%
+    summarize(n = n(),
+              extreme_median = sum(extreme_median),
+              extreme_positive = sum(extreme_positive),
+              extreme_negative = sum(extreme_negative),
+              extreme_positive_sig = sum(extreme_positive_sig),
+              extreme_negative_sig = sum(extreme_negative_sig)) %>%
+    gather(variable, n_extreme, contains("extreme")) %>%
+    mutate(p_value = n_extreme / n,
+           p_value = ifelse(p_value == 1.000, "1.000", 
+               ifelse(p_value < .001, "< .001", gsub("0.(.*)", ".\\1", sprintf("%.3f", p_value))))) %>%
+    select(x, y, variable, p_value) %>%
+    spread(variable, p_value) %>%
+    left_join(., select(ungroup(data$summary), x, y, obs_median, obs_conf_low, obs_conf_high, obs_n_positive_sig, obs_n_negative_sig), by = c("x", "y")) %>%
+    mutate(`Mdn [95% CI]` = sprintf("%.2f [%.2f, %.2f]", obs_median, obs_conf_low, obs_conf_high)) %>%
+    select(y, `Mdn [95% CI]`, extreme_median, obs_n_positive_sig, extreme_positive_sig, obs_n_negative_sig, extreme_negative_sig) %>%
+    rename("Mdn p" = extreme_median,
+           "Positive N" = obs_n_positive_sig,
+           "Positive p" = extreme_positive_sig,
+           "Negative N" = obs_n_negative_sig,
+           "Negative p" = extreme_negative_sig) %>%
+    gather(var, val, -c(x, y)) %>%
+    unite(y, y, var, sep = " ") %>%
+    spread(y, val)
+  
+    # data$boot %>%
+    # left_join(., data$summary, c("x", "y")) %>%
+    # mutate(extreme_median = ifelse(obs_median > 0 & median >= obs_median, 1,
+    #                         ifelse(obs_median < 0 & median <= obs_median, 1, 0)),
+    #        extreme_positive = ifelse(n_positive >= obs_n_positive, 1, 0),
+    #        extreme_negative = ifelse(n_negative >= obs_n_negative, 1, 0),
+    #        extreme_positive_sig = ifelse(n_positive_sig >= obs_n_positive_sig, 1, 0),
+    #        extreme_negative_sig = ifelse(n_negative_sig >= obs_n_negative_sig, 1, 0)) %>%
+    # group_by(x, y) %>%
+    # summarize(n = n(),
+    #           extreme_median = sum(extreme_median),
+    #           extreme_positive = sum(extreme_positive),
+    #           extreme_negative = sum(extreme_negative),
+    #           extreme_positive_sig = sum(extreme_positive_sig),
+    #           extreme_negative_sig = sum(extreme_negative_sig)) %>%
+    # gather(variable, n_extreme, contains("extreme")) %>%
+    # mutate(p_value = n_extreme / n,
+    #        se = sqrt((p_value * (1 - p_value)) / n),
+    #        p_value = ifelse(p_value == 1.000, "1.000", 
+    #            ifelse(p_value < .001, "< .001", gsub("0.(.*)", ".\\1", sprintf("%.3f", p_value))))) %>%
+    # select(x, y, variable, p_value, se) %>%
+    # left_join(., select(ungroup(data$summary), x, y, obs_median, obs_conf_low, obs_conf_high, obs_n_positive_sig, obs_n_negative_sig), by = c("x", "y")) %>%
+    # mutate(`Mdn [95% CI]` = sprintf("%.2f [%.2f, %.2f]", obs_median, obs_conf_low, obs_conf_high)) %>%
+    # #select(y, `Mdn [95% CI]`, extreme_median, obs_n_positive_sig, extreme_positive_sig, obs_n_negative_sig, extreme_negative_sig) %>%
+    # mutate(variable = gsub("extreme_median", "Mdn p", variable),
+    #        variable = gsub("obs_n_positive_sig", "Positive N", variable),
+    #        variable = gsub("extreme_positive_sig", "Positive p", variable),
+    #        variable = gsub("obs_n_negative_sig", "Negative N", variable),
+    #        variable = gsub("extreme_negative_sig", "Negative p", variable),
+    #        `Mdn [95% CI]2` = sprintf("%.2f [%.2f, %.2f]", obs_median, obs_median - (1.96*se), obs_median + (1.96*se))) %>%
+    #   filter(!grepl("extreme", variable))
+    # gather(var, val, -c(x, y)) %>%
+    # unite(y, y, var, sep = " ") %>%
+    # spread(y, val)
+    # 
+}
+```
+
+# load and tidy data
+Read `betas_dataset.RDS` and `dots_dataset.RDS` saved from the `prediction_models.Rmd`
+
+* Ran uniformity and association test data separately because the models were breaking when trying to include test type as a covariate
+
+```{r, cache = TRUE}
+source("load_data.R")
+
+ind_diffs1 = ind_diffs %>%
+  mutate(bmi = as.numeric(scale(bmi)),
+         fat = as.numeric(scale(fat)))
+
+ema_enact1 = ema_enact %>%
+  mutate(enact_prop = as.numeric(scale(enact_prop)))
+
+betas_std = readRDS("betas_dataset.RDS") %>%
+  filter(session == "all") %>%
+  group_by(subjectID, process, condition, control) %>%
+  mutate(value_std = mean(meanPE_std, na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(subjectID, process, condition, control, value_std) %>%
+  unique() %>%
+  mutate(process = sprintf("%s_ROI", process)) %>%
+  filter(grepl("snack|meal|dessert|food", condition))
+
+data_unif = readRDS("dots_dataset.RDS") %>%
+  filter(session == "all" & mask == "unmasked") %>%
+  filter((test == "uniformity" & !process == "craving_regulation") | 
+           (test == "association" & process == "craving_regulation"))  %>%
+  mutate(process = sprintf("%s_PEV", process)) %>%
+  rename("value_std" = dotProduct_std) %>%
+  select(subjectID, process, condition, control, value_std) %>%
+  unique() %>%
+  filter(grepl("snack|meal|dessert|food", condition)) %>%
+  bind_rows(betas_std) %>%
+  left_join(., ind_diffs1, by = "subjectID") %>%
+  left_join(., ema_enact1, by = "subjectID") %>%
+  select(-c(sample, DBIC_ID, age, gender)) %>%
+  rename("contrast" = control,
+         "stimulus" = condition) %>%
+  mutate(stimulus = as.factor(stimulus),
+         contrast = as.factor(contrast)) %>%
+  spread(process, value_std)
+
+data_assoc = readRDS("dots_dataset.RDS") %>%
+  filter(session == "all" & mask == "unmasked" & test == "association") %>%
+  mutate(process = sprintf("%s_PEV", process)) %>%
+  rename("value_std" = dotProduct_std) %>%
+  select(subjectID, process, condition, control, value_std) %>%
+  unique() %>%
+  filter(grepl("snack|meal|dessert|food", condition)) %>%
+  bind_rows(betas_std) %>%
+  left_join(., ind_diffs1, by = "subjectID") %>%
+  left_join(., ema_enact1, by = "subjectID") %>%
+  select(-c(sample, DBIC_ID, age, gender)) %>%
+  rename("contrast" = control,
+         "stimulus" = condition) %>%
+  mutate(stimulus = as.factor(stimulus),
+         contrast = as.factor(contrast)) %>%
+  spread(process, value_std)
+
+data_unif_gathered = data_unif %>%
+  gather(process, value_std, contains("ROI"), contains("PEV")) %>%
+  mutate(test = ifelse(grepl("PEV", process), "uniformity", "ROI"))
+
+data_assoc_gathered = data_assoc %>%
+  gather(process, value_std, contains("ROI"), contains("PEV")) %>%
+  mutate(test = ifelse(grepl("PEV", process), "association", "ROI"))
+
+data_combined = bind_rows(data_unif_gathered, data_assoc_gathered) %>%
+  unique()
+
+head(data_combined)
+```
+
+# large coefficient models
+## specify modeling approach
+
+* Also include the following subsets: stimulus type (food, meal, snack, dessert) and contrast (nature or rest)
+```{r}
+setup_specs(y = c("bmi", "fat", "enact_prop"),
+            x = c("reward_ROI", "reward_PEV",
+                  "value_ROI", "value_PEV",
+                  "cognitive_control_ROI", "cognitive_control_PEV",
+                  "craving_PEV", "craving_regulation_PEV"),
+            controls = c("reward_ROI", "reward_PEV",
+                         "value_ROI", "value_PEV",
+                         "cognitive_control_ROI", "cognitive_control_PEV",
+                         "craving_PEV", "craving_regulation_PEV"),
+            model = c("lm")) %>%
+  filter(!x == controls)
+```
+
+## define common variables
+```{r}
+data = data_combined
+var = c("reward_ROI", "reward_PEV",
+        "value_ROI", "value_PEV",
+        "cognitive_control_ROI", "cognitive_control_PEV",
+        "craving_PEV", "craving_regulation_PEV")
+```
+
+## run SCAs {.tabset}
+### BMI
+```{r, fig.width=12, fig.height=16}
+# define outcome
+outcome = "bmi"
+
+# run sca
+output = run_sca(data = data, var = var, outcome = outcome, boot = FALSE)
+
+bmi_output_plot = output$results %>%
+  mutate(`a priori` = ifelse(x == "value ROI" & controls == "reward ROI" &
+                               stimulus == "food" & contrast == "nature", "ROI model", 
+                      ifelse(x == "reward ROI" & controls == "value ROI" &
+                               stimulus == "food" & contrast == "nature", "ROI model", 
+                      ifelse(x == "craving regulation PEV" & controls == "no covariates" & 
+                               stimulus == "food" & contrast == "nature", "PEV model", "not included"))))
+  
+# plot
+plot_sca(data = bmi_output_plot, combined = FALSE, choices = c("x", "test", "stimulus", "contrast", "a priori"))
+```
+
+```{r, fig.width=10, fig.height=6}
+(bmi_compare = plot_sca_compare(data = bmi_output_plot, pointrange = FALSE))
+plot_decisiontree(bmi_output_plot, legend = TRUE)
+```
+
+### % fat
+```{r, fig.width=12, fig.height=16}
+# define outcome
+outcome = "fat"
+
+# run sca
+output = run_sca(data = data, var = var, outcome = outcome, boot = FALSE, n_shuffles = n_shuffles, rerun = FALSE)
+
+fat_output_plot = output$results %>%
+  mutate(`a priori` = ifelse(x == "reward ROI" & controls == "no covariates" &
+                               stimulus == "food" & contrast == "nature", "ROI model", 
+                      ifelse(x == "craving PEV" & controls == "no covariates" & 
+                               stimulus == "food" & contrast == "nature" & test == "association", "PEV model", "not included")),
+         y = ifelse(grepl("%", y), "body fat percentage", y))
+
+# plot
+plot_sca(data = fat_output_plot, combined = FALSE, choices = c("x", "test", "stimulus", "contrast", "a priori"))
+```
+
+```{r, fig.width=10, fig.height=6}
+(fat_compare = plot_sca_compare(data = fat_output_plot, pointrange = FALSE))
+plot_decisiontree(fat_output_plot, legend = TRUE)
+```
+
+### enactment
+```{r, fig.width=12, fig.height=16}
+# define outcome
+outcome = "enact_prop"
+
+# run sca
+output = run_sca(data = data, var = var, outcome = outcome, boot = FALSE, n_shuffles = n_shuffles, rerun = FALSE)
+
+enact_output_plot = output$results %>%
+  mutate(`a priori` = ifelse(x == "value ROI" & controls == "no covariates" &
+                               stimulus == "food" & contrast == "nature", "ROI model", 
+                      ifelse(x == "reward PEV" & controls == "no covariates" & 
+                               stimulus == "food" & contrast == "nature" & test == "association", "PEV model", "not included")))
+
+# plot
+plot_sca(data = enact_output_plot, combined = FALSE, choices = c("x", "test", "stimulus", "contrast", "a priori"))
+```
+
+```{r, fig.width=10, fig.height=6}
+(enact_compare = plot_sca_compare(data = enact_output_plot, pointrange = FALSE))
+plot_decisiontree(enact_output_plot, legend = TRUE)
+```
+
+### combined plots
+```{r, fig.width=16, fig.height=11}
+bmi_sca = plot_sca(data = bmi_output_plot, combined = FALSE, labels = c("A", "B"), title = TRUE,
+                   point_size = .2, point_alpha = 1, ci_size = .1, ci_alpha = .5, text_size = 18,
+                   remove_facet = TRUE,
+                   choices = c("x", "test", "stimulus", "contrast", "a priori"))
+fat_sca = plot_sca(data = fat_output_plot, combined = FALSE, labels = c("C", "D"), title = TRUE,
+                   point_size = .2, point_alpha = 1, ci_size = .1, ci_alpha = .5, text_size = 18,
+                   remove_y = TRUE, remove_facet = TRUE,
+                   choices = c("x", "test", "stimulus", "contrast", "a priori"))
+enact_sca = plot_sca(data = enact_output_plot, combined = FALSE, labels = c("E", "F"), title = TRUE,
+                     point_size = .2, point_alpha = 1, ci_size = .1, ci_alpha = .5, text_size = 18,
+                     remove_y = TRUE,
+                     choices = c("x", "test", "stimulus", "contrast", "a priori"))
+
+cowplot::plot_grid(bmi_sca, fat_sca, enact_sca, ncol = 3, rel_widths = c(.38, .31, .31))
+```
+
+```{r, fig.width=16, fig.height=11}
+bmi_compare = plot_sca_compare(data = bmi_output_plot, pointrange = FALSE, title = TRUE,
+                               labels = c("A", "B"), rel_heights = c(.5, .5), text_size = 18,
+                               n_rows = 2, 
+                               sig = c("reward ROI", "value ROI", "cognitive control PEV",
+                                       "craving PEV", "craving regulation PEV"))
+fat_compare = plot_sca_compare(data = fat_output_plot, pointrange = FALSE, title = TRUE,
+                               labels = c("C", "D"), rel_heights = c(.5, .5), text_size = 18,
+                               remove_y = TRUE, n_rows = 2,
+                               sig = c("value ROI", "craving PEV"))
+enact_compare = plot_sca_compare(data = enact_output_plot, pointrange = FALSE, title = TRUE,
+                                 labels = c("E", "F"), rel_heights = c(.5, .5), text_size = 18,
+                                 remove_y = TRUE, n_rows = 2,
+                                 sig = c("reward ROI", "reward PEV", "value ROI",
+                                         "value PEV", "craving PEV", "cognitive control ROI"))
+
+cowplot::plot_grid(bmi_compare, fat_compare, enact_compare, ncol = 3)
+```
+
+# neural covariate models 
+## define common variables
+```{r}
+data = data_combined
+n_shuffles = 500
+outcome = c("bmi", "fat", "enact_prop")
+```
+
+## run SCAs {.tabset}
+### reward ROI
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "reward_ROI"
+
+# run SCA
+reward_ROI_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+
+reward_ROI_output$summary 
+
+# stats
+(reward_ROI = boot_stats(data = reward_ROI_output))
+
+# plot
+plot_sca(data = reward_ROI_output$results, combined = TRUE, title = TRUE)
+```
+
+### reward PEV
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "reward_PEV"
+
+# run SCA
+reward_PEV_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+reward_PEV_output$summary 
+
+# stats
+(reward_PEV = boot_stats(data = reward_PEV_output))
+
+# plot
+plot_sca(data = reward_PEV_output$results, combined = TRUE, title = TRUE)
+```
+
+### value ROI
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "value_ROI"
+
+# run SCA
+value_ROI_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+value_ROI_output$summary 
+
+# stats
+(value_ROI = boot_stats(data = value_ROI_output))
+
+# plot
+plot_sca(data = value_ROI_output$results, combined = TRUE, title = TRUE)
+```
+
+### value PEV
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "value_PEV"
+
+# run SCA
+value_PEV_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+value_PEV_output$summary 
+
+# stats
+(value_PEV = boot_stats(data = value_PEV_output))
+
+# plot
+plot_sca(data = value_PEV_output$results, combined = TRUE, title = TRUE)
+```
+
+### cognitive control ROI
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "cognitive_control_ROI"
+
+# run SCA
+cognitive_control_ROI_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+cognitive_control_ROI_output$summary 
+
+# stats
+(cognitive_control_ROI = boot_stats(data = cognitive_control_ROI_output))
+
+# plot
+plot_sca(data = cognitive_control_ROI_output$results, combined = TRUE, title = TRUE)
+```
+
+### cognitive control PEV
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "cognitive_control_PEV"
+
+# run SCA
+cognitive_control_PEV_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+cognitive_control_PEV_output$summary 
+
+# stats
+(cognitive_control_PEV = boot_stats(data = cognitive_control_PEV_output))
+
+# plot
+plot_sca(data = cognitive_control_PEV_output$results, combined = TRUE, title = TRUE)
+```
+
+### craving PEV
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "craving_PEV"
+
+# run SCA
+craving_PEV_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+craving_PEV_output$summary 
+
+# stats
+(craving_PEV = boot_stats(data = craving_PEV_output))
+
+# plot
+plot_sca(data = craving_PEV_output$results, combined = TRUE, title = TRUE)
+```
+
+### craving regulation PEV
+```{r, fig.width=8, fig.height=10}
+# define variable
+var = "craving_regulation_PEV"
+
+# run SCA
+craving_regulation_PEV_output = run_sca(data = data, var = var, outcome = outcome, boot = TRUE, n_shuffles = n_shuffles, rerun = FALSE)
+craving_regulation_PEV_output$summary 
+
+# stats
+(craving_regulation_PEV = boot_stats(data = craving_regulation_PEV_output))
+
+# plot
+plot_sca(data = craving_regulation_PEV_output$results, combined = TRUE, title = TRUE)
+```
+
+## plot combined SCAs {.tabset}
+### reward
+```{r, fig.width=14, fig.height=11}
+limits = c(min(reward_PEV_output$results$conf.low), max(reward_PEV_output$results$conf.high))
+
+a = plot_sca(data = mutate(reward_ROI_output$results, 
+                           controls = ifelse(controls == "reward PEV", "reward PEV / ROI", controls)), 
+             combined = TRUE, title = TRUE, labels = c("A", "B"),
+             choices = c("y", "test", "stimulus", "contrast", "controls"),
+             remove_facet = TRUE, text_size = 18, limits = limits)
+
+b = plot_sca(data = reward_PEV_output$results, combined = TRUE, title = TRUE, labels = c("C", "D"),
+         choices = c("y", "test", "stimulus", "contrast", "controls"),
+         remove_y = TRUE, text_size = 18, limits = limits)
+
+cowplot::plot_grid(a, b, ncol = 2, rel_widths = c(.54, .46))
+```
+
+### value
+```{r, fig.width=14, fig.height=11}
+limits = c(min(value_PEV_output$results$conf.low), max(value_PEV_output$results$conf.high))
+
+a = plot_sca(data = mutate(value_ROI_output$results, 
+                           controls = ifelse(controls == "value PEV", "value PEV / ROI", controls)), 
+             combined = TRUE, title = TRUE, labels = c("A", "B"),
+             choices = c("y", "test", "stimulus", "contrast", "controls"),
+             remove_facet = TRUE, text_size = 18, limits = limits)
+
+b = plot_sca(data = value_PEV_output$results, combined = TRUE, title = TRUE, labels = c("C", "D"),
+         choices = c("y", "test", "stimulus", "contrast", "controls"),
+         remove_y = TRUE, text_size = 18, limits = limits)
+
+cowplot::plot_grid(a, b, ncol = 2, rel_widths = c(.53, .47))
+```
+
+### cognitive control
+```{r, fig.width=14, fig.height=11}
+limits = c(min(cognitive_control_ROI_output$results$conf.low), max(cognitive_control_PEV_output$results$conf.high))
+
+a = plot_sca(data = mutate(cognitive_control_ROI_output$results, 
+                           controls = ifelse(controls == "cognitive control PEV", "cognitive control PEV / ROI", controls)), 
+             combined = TRUE, title = TRUE, labels = c("A", "B"),
+             choices = c("y", "test", "stimulus", "contrast", "controls"),
+             remove_facet = TRUE, text_size = 18, limits = limits)
+
+b = plot_sca(data = cognitive_control_PEV_output$results, combined = TRUE, title = TRUE, labels = c("C", "D"),
+         choices = c("y", "test", "stimulus", "contrast", "controls"),
+         remove_y = TRUE, text_size = 18, limits = limits)
+
+cowplot::plot_grid(a, b, ncol = 2, rel_widths = c(.57, .43))
+```
+
+### craving & craving regulation
+```{r, fig.width=14, fig.height=11}
+limits = c(min(craving_PEV_output$results$conf.low), max(craving_PEV_output$results$conf.high))
+
+a = plot_sca(data = mutate(craving_PEV_output$results, 
+                           controls = ifelse(controls == "craving regulation PEV", "craving regulation / craving PEV", controls)), 
+             combined = TRUE, title = TRUE, labels = c("A", "B"),
+             choices = c("y", "test", "stimulus", "contrast", "controls"),
+             remove_facet = TRUE, text_size = 18, limits = limits)
+
+b = plot_sca(data = craving_regulation_PEV_output$results, combined = TRUE, title = TRUE, labels = c("C", "D"),
+         choices = c("y", "test", "stimulus", "contrast", "controls"),
+         remove_y = TRUE, text_size = 18, limits = limits)
+
+cowplot::plot_grid(a, b, ncol = 2, rel_widths = c(.57, .43))
+```
+
+# combined table
+```{r}
+bind_rows(reward_ROI, reward_PEV, value_ROI, value_PEV, cognitive_control_ROI, cognitive_control_PEV, craving_PEV, craving_regulation_PEV) %>%
+  kable(format = "pandoc", digits = 2)
+```
+

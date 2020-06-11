@@ -6,3 +6,6 @@
 *_output.txt
 .Rproj.user
 .Rhistory
+figs/
+archive/
+**cache**

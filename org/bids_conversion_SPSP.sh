@@ -5,8 +5,8 @@
 
 # user inpu: define paths
 #------------------------------------------
-raw_dir=/projects/dsnlab/dcosme/RRV/raw
-bids_dir=/projects/dsnlab/dcosme/RRV/bids_data
+raw_dir=/projects/sanlab/shared/RRV/raw
+bids_dir=/projects/sanlab/shared/RRV/bids_data
 
 # change directories to raw_dir
 #------------------------------------------

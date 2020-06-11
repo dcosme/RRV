@@ -1,0 +1,58 @@
+---
+title: "Motion exclusions"
+author: "Dani Cosme"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: show
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# load packages
+```{r}
+library(tidyverse)
+library(knitr)
+```
+
+# load data
+```{r}
+motion = read.csv("~/Documents/code/sanlab/RRV_scripts/fMRI/fx/motion/auto-motion-fmriprep/summary/RRV_summaryRun.csv")
+```
+
+# summarize by task
+```{r}
+motion %>%
+  group_by(wave, task) %>%
+  summarize(mean_motion = mean(percent, na.rm = TRUE),
+            median_motion = median(percent, na.rm = TRUE),
+            sd_motion = sd(percent, na.rm = TRUE)) %>%
+  kable(digits = 2)
+
+(10 - 0.4) / 2.285573
+```
+
+# ROC
+```{r}
+motion %>%
+  filter(percent > 10) %>%
+  group_by(subjectID, task) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+motion %>%
+  filter(percent > 10) %>%
+  group_by(subjectID, task) %>%
+  mutate(n = n())
+```

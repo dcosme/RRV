@@ -17,7 +17,7 @@ output:
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = TRUE)
 ```
 
 # load packages
@@ -56,7 +56,6 @@ dots_std = dots %>%
 # join data frames
 dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
   mutate(subjectID = as.character(subjectID)) %>%
-  left_join(., ind_diffs, by = c("subjectID")) %>%
   ungroup() %>%
   mutate(subjectID = as.factor(subjectID),
          condition = as.factor(condition),
@@ -67,49 +66,48 @@ dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "
 ```
 
 # tidy data
-* grand-mean center neuro variables
-
 ```{r}
+ema_tidy = ema %>%
+  select(subjectID, desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m, hunger.m) %>%
+  unique()
+
 model_data = dataset %>%
   filter(((!grepl("neuralsig", map) & test == "association" & mask == "masked") | (grepl("neuralsig", map) & mask == "unmasked")) & 
            session == "all" & control == "nature" & condition == "snack") %>%
   unique() %>%
   group_by(process, subjectID) %>%
   mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE),
-         processPE = paste0(process, "PE")) %>%
-  select(-c(xyz, meanPE, meanPE_std, sdPE, dotProduct, map)) %>%
-  spread(process, dotProduct_std) %>%
+         processPE = paste0(process, "_ROI"),
+         processPEV = paste0(process, "_PEV")) %>%
+  ungroup() %>%
+  select(-c(xyz, meanPE, meanPE_std, sdPE, dotProduct, map, process)) %>%
+  spread(processPEV, dotProduct_std) %>%
   spread(processPE, meanProcessPEstd) %>%
   group_by(subjectID) %>%
   fill(everything(), .direction = "down") %>%
   fill(everything(), .direction = "up") %>%
-  select(-c(roi, cravingPE, craving_regulationPE, test, age, gender, mask)) %>%
+  select(-c(roi, craving_ROI, craving_regulation_ROI, test, mask)) %>%
   unique() %>%
-  mutate(balancePE = cognitive_controlPE - rewardPE) %>%
-  select(-c(session, con, condition, control, DBIC_ID)) %>%
-  gather(var, val, -c(subjectID, sample, bmi, fat)) %>%
-  group_by(var) %>%
-  mutate(val_c = scale(val, center = TRUE, scale = FALSE)) %>%
-  select(-val) %>%
-  ungroup() %>%
-  mutate(var = paste0(var, "_gm")) %>%
-  spread(var, val_c) %>%
-  right_join(., ema, by = c("subjectID", "bmi", "fat"))
+  mutate(balance_ROI = cognitive_control_ROI - reward_ROI) %>%
+  right_join(., ema_tidy, by = "subjectID") %>%
+  na.omit()
 ```
 
-# visualize
+# visualize {.tabset}
 ## ROIs
 ```{r, fig.width=8, fig.height=5}
 model_data %>%
-  select(subjectID, contains("PE_gm"), desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m) %>%
+  select(subjectID, contains("ROI"), desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m) %>%
   unique() %>%
-  gather(neuro_var, neuro_val, contains("gm")) %>%
-  mutate(neuro_var = factor(neuro_var, levels = c("balancePE_gm", "cognitive_controlPE_gm", "rewardPE_gm", "valuePE_gm"))) %>%  gather(ema_var, ema_val, contains("m"), contains("prop")) %>%
+  gather(neuro_var, neuro_val, contains("ROI")) %>%
+  mutate(neuro_var = factor(neuro_var, levels = c("balance_ROI", "cognitive_control_ROI",
+                                                  "reward_ROI", "value_ROI"))) %>%
+  gather(ema_var, ema_val, contains("m"), contains("prop")) %>%
   group_by(ema_var) %>%
   do({
     plot = ggplot(., aes(neuro_val, ema_val, color = neuro_var)) +
       geom_point(alpha = .5) +
-      geom_smooth(method = "lm", , alpha = .1) +
+      geom_smooth(method = "lm", alpha = .1, fullrange = TRUE) +
       scale_color_manual(name = "", values = pal_process) +
       labs(x = "\n mean parameter estimate", y = paste0(.$ema_var[[1]], "\n")) +
       theme_minimal(base_size = 14)
@@ -117,23 +115,22 @@ model_data %>%
     print(plot)
     data.frame()
   })
-
 ```
 
 ## MAMs
 ```{r, fig.width=8, fig.height=5}
 model_data %>%
-  select(subjectID, contains("_gm"), -contains("PE"), desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m) %>%
+  select(subjectID, contains("PEV"), desire_pres0.prop, desire_str.m, goal_conf.m, resist.m, enact_prop, amount_Recoded.m) %>%
   unique() %>%
-  gather(neuro_var, neuro_val, contains("gm")) %>%
-  mutate(neuro_var = factor(neuro_var, levels = c("cognitive_control_gm", "reward_gm", "value_gm",
-                                                  "craving_gm", "craving_regulation_gm"))) %>%
+  gather(neuro_var, neuro_val, contains("PEV")) %>%
+  mutate(neuro_var = factor(neuro_var, levels = c("cognitive_control_PEV", "reward_PEV", "value_PEV",
+                                                  "craving_PEV", "craving_regulation_PEV"))) %>%
   gather(ema_var, ema_val, contains("m"), contains("prop")) %>%
   group_by(ema_var) %>%
   do({
     plot = ggplot(., aes(neuro_val, ema_val, color = neuro_var)) +
       geom_point(alpha = .5) +
-      geom_smooth(method = "lm", , alpha = .1) +
+      geom_smooth(method = "lm", alpha = .1, fullrange = TRUE) +
       scale_color_manual(name = "", values = pal_process[2:6]) +
       labs(x = "\n mean parameter estimate", y = paste0(.$ema_var[[1]], "\n")) +
       theme_minimal(base_size = 14)
@@ -144,80 +141,153 @@ model_data %>%
 
 ```
 
-# run MLM models
-## desire presence
+
+# run regression models
+## specify model variables
 ```{r}
-model_desire_yn = glmer(desire_pres0 ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      family = binomial,
-                      data = model_data,
-                      na.action = "na.exclude")
-summary(model_desire_yn)
+options(na.action = "na.fail")
+data_ctrl = caret::trainControl(method = "repeatedcv", number = 5, repeats = 5)
 ```
 
-## desire strength
+## desire presence proportion {.tabset}
+### ROI models
 ```{r}
-model_desire = lmer(desire_str ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      data = model_data,
-                      na.action = "na.exclude")
-
-summary(model_desire)
+desire_prop_roi_full = lm(desire_pres0.prop ~ value_ROI + reward_ROI + cognitive_control_ROI, data = model_data)
+(desire_prop_roi_mods = MuMIn::dredge(desire_prop_roi_full))
 ```
 
-## goal conflict
 ```{r}
-model_goal_conflict = lmer(goal_conf ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      data = model_data,
-                      na.action = "na.exclude")
+MuMIn::get.models(desire_prop_roi_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
 
-summary(model_goal_conflict)
+best_desire_prop_roi = caret::train(desire_pres0.prop ~ reward_ROI,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
 ```
 
-## resistance
+### MAM models
 ```{r}
-model_resist = lmer(resist ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      data = model_data,
-                      na.action = "na.exclude")
-
-summary(model_resist)
+desire_prop_mam_full = lm(desire_pres0.prop ~ value_PEV + reward_PEV + cognitive_control_PEV + craving_PEV + craving_regulation_PEV, data = model_data)
+(desire_prop_mam_mods = MuMIn::dredge(desire_prop_mam_full))
 ```
 
-## enactment
 ```{r}
-model_enact = glmer(enact ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      family = binomial,
-                      data = model_data,
-                      na.action = "na.exclude")
-summary(model_enact)
+MuMIn::get.models(desire_prop_mam_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_desire_prop_mam = caret::train(desire_pres0.prop ~ value_PEV,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
 ```
 
-## amount eaten
+### combined
 ```{r}
-model_amount = lmer(amount ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      data = model_data,
-                      na.action = "na.exclude")
+desire_prop_null = lm(desire_pres0.prop ~ 1, data = model_data)
 
-summary(model_amount)
+desire_prop_combined = caret::train(desire_pres0.prop ~ reward_ROI + value_PEV,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(desire_prop_null, best_desire_prop_roi$finalModel, best_desire_prop_mam$finalModel, desire_prop_combined$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+
 ```
 
-## hunger
-```{r}
-model_hunger = lmer(hunger ~ rewardPE_gm + cognitive_controlPE_gm +  valuePE_gm + balancePE_gm +
-                      reward_gm + cognitive_control_gm + value_gm + craving_gm + craving_regulation_gm +
-                      (1 | subjectID),
-                      data = model_data,
-                      na.action = "na.exclude")
+Summarize the overall best fitting
 
-summary(model_hunger)
+```{r}
+summary(best_desire_prop_mam$finalModel)
+best_desire_prop_mam
+sd(best_desire_prop_mam$resample$Rsquared)
+sd(best_desire_prop_mam$resample$RMSE)
 ```
+
+
+## enactment proportion {.tabset}
+### ROI models
+```{r}
+enact_prop_roi_full = lm(enact_prop ~ value_ROI + reward_ROI + cognitive_control_ROI, data = model_data)
+(enact_prop_roi_mods = MuMIn::dredge(enact_prop_roi_full))
+```
+
+```{r}
+MuMIn::get.models(enact_prop_roi_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_enact_prop_roi = caret::train(enact_prop ~ reward_ROI,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### MAM models
+```{r}
+enact_prop_mam_full = lm(enact_prop ~ value_PEV + reward_PEV + cognitive_control_PEV + craving_PEV + craving_regulation_PEV, data = model_data)
+(enact_prop_mam_mods = MuMIn::dredge(enact_prop_mam_full))
+```
+
+```{r}
+MuMIn::get.models(enact_prop_mam_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_enact_prop_mam = caret::train(enact_prop ~ cognitive_control_PEV + craving_regulation_PEV + reward_PEV + value_PEV,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### combined
+```{r}
+enact_prop_null = lm(enact_prop ~ 1, data = model_data)
+
+enact_prop_combined = caret::train(enact_prop ~ reward_ROI + cognitive_control_PEV + craving_regulation_PEV + reward_PEV + value_PEV,
+                     data = model_data,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+AIC(enact_prop_null, best_enact_prop_roi$finalModel, best_enact_prop_mam$finalModel, enact_prop_combined$finalModel) %>%
+  rownames_to_column() %>%
+  arrange(AIC)
+
+```
+
+Summarize the overall best fitting
+
+```{r}
+summary(best_enact_prop_mam$finalModel)
+best_enact_prop_mam
+sd(best_enact_prop_mam$resample$Rsquared)
+sd(best_enact_prop_mam$resample$RMSE)
+```
+
+
