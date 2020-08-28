@@ -134,7 +134,7 @@ ind_diffs = read.csv("individual_diffs_outcomes.csv") %>%
          "gender" = Gender,
          "sample" = Sample) %>%
   mutate(subjectID = as.character(subjectID)) %>%
-  select(sample, DBIC_ID, subjectID, age, gender, bmi, fat) %>%
+  select(sample, DBIC_ID, subjectID, age, gender, bmi, fat, restraint) %>%
   left_join(., unique(select(ema, subjectID, fat)), by = "subjectID") %>%
   mutate(fat.x = ifelse(sample == "2012_FDES", fat.y, fat.x)) %>%
   select(-fat.y) %>%
