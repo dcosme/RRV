@@ -1,0 +1,1063 @@
+---
+title: "Visualization & Cross-validated Model Comparison"
+author: "Dani Cosme & Rich Lopez"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    code_folding: hide
+    df_print: paged
+    highlight: tango
+    theme: united
+    toc: yes
+    toc_float:
+      collapsed: yes
+      smooth_scroll: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE, cache = FALSE, fig.path = "figs/xval/")
+```
+
+# load packages
+```{r}
+library(tidyverse)
+library(knitr)
+```
+
+# define palettes
+```{r}
+pal_control = c("#2E86B4", "#F2B827")
+pal_outcome = wesanderson::wes_palette("Zissou1", 3, "continuous")
+pal_condition = wesanderson::wes_palette("Zissou1", 6, "continuous")
+pal_condition8 = c("#3B9AB2", "#357382", "#E86900", "#7FB8BA", "#ED4100", "#CC1400", "#EECC20", "#E1B002")
+pal_condition8 = c("#CC1400", "#ED4100", "#E86900", "#357382", "#3B9AB2", "#7FB8BA", "#E1B002", "#EECC20")
+```
+
+# source data
+* Note that % fat variable was incorrect in 2012_FDES --> replaced it with the data from the EMA dataframe
+
+```{r, cache=TRUE}
+source("load_data.R")
+saveRDS(ind_diffs, "ind_diffs.RDS")
+saveRDS(ema, "ema.RDS")
+
+ind_diffs = ind_diffs %>%
+  mutate(bmi_z = as.numeric(scale(bmi)),
+         fat_z = as.numeric(scale(fat)))
+```
+
+# standardize brain data
+* Windsorizing observations +/- 3 SD from the mean to 3 --> otherwise we lose these subs in the SCA analyses  
+* Z-score within ROI and session for ROIs  
+* Z-score within map, test (association or uniformity), mask (masked or unmasked) and session for PEVs  
+
+```{r}
+# roi distributions
+betas %>%
+  filter(session == "all") %>%
+  select(subjectID, con, condition, control, roi, process, meanPE) %>%
+  unique() %>%
+  filter(!is.na(roi)) %>%
+  ggplot(aes(meanPE, fill = roi)) +
+  geom_density(color = NA) +
+  facet_wrap(~roi, ncol = 4) +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = "none")
+
+# dot product distribution
+dots %>%
+  filter(session == "all") %>%
+  select(subjectID, con, condition, control, process, test, dotProduct) %>%
+  unique() %>%
+  ggplot(aes(dotProduct, fill = test)) +
+  geom_density(color = NA) +
+  facet_wrap(~process, ncol = 3, scales = "free") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(.85, .2))
+
+dots %>%
+  filter(session == "all") %>%
+  select(subjectID, con, condition, control, process, test, dotProduct, mask) %>%
+  unique() %>%
+  ggplot(aes(dotProduct, fill = mask, alpha = .5)) +
+  geom_density(color = NA) +
+  facet_wrap(~process, ncol = 3, scales = "free") +
+  theme_minimal(base_size = 14) +
+  theme(legend.position = c(.85, .2))
+
+# standardize and winsorize
+betas_std = betas %>%
+  group_by(roi, session) %>%
+  mutate(meanPE_std = scale(meanPE, center = TRUE, scale = TRUE),
+         outlier = ifelse(meanPE_std > 3, "yes",
+                   ifelse(meanPE_std < -3, "yes", "no")),
+         meanPE_std = ifelse(meanPE_std > 3, 3,
+                      ifelse(meanPE_std < -3, -3, meanPE_std))) %>%
+  ungroup()
+
+dots_std = dots %>%
+  group_by(map, test, mask, session) %>%
+  mutate(dotProduct_std = scale(dotProduct, center = TRUE, scale = TRUE),
+         outlier = ifelse(dotProduct_std > 3, "yes",
+                   ifelse(dotProduct_std < -3, "yes", "no")),
+         dotProduct_std = ifelse(dotProduct_std > 3, 3,
+                          ifelse(dotProduct_std < -3, -3, dotProduct_std))) %>%
+  ungroup()
+
+```
+
+## summarize outliers
+```{r}
+# summarize
+betas_std %>%
+  filter(session == "all") %>%
+  group_by(outlier) %>%
+  summarize(n = n()) %>%
+  spread(outlier, n) %>%
+  mutate(percent = round((yes / (yes + no)) * 100, 2))
+
+dots_std %>%
+  filter(session == "all") %>%
+  group_by(outlier, test, mask) %>%
+  summarize(n = n()) %>%
+  spread(outlier, n) %>%
+  mutate(percent = round((yes / (yes + no)) * 100, 2))
+
+# remove outlier column
+betas_std = betas_std %>%
+  select(-outlier)
+
+dots_std = dots_std %>%
+  select(-outlier)
+```
+
+# merge data
+```{r}
+dataset = full_join(betas_std, dots_std, by = c("subjectID", "con", "process", "condition", "control", "session")) %>%
+  filter(!condition == "social" & mask == "unmasked") %>%
+  mutate(subjectID = as.character(subjectID)) %>%
+  left_join(., ind_diffs, by = "subjectID") %>%
+  ungroup() %>%
+  mutate(subjectID = as.factor(subjectID),
+         condition = as.factor(condition),
+         control = as.factor(control),
+         roi = as.factor(roi),
+         process = as.factor(process),
+         test = as.factor(test))
+
+saveRDS(dataset, "full_dataset.RDS")
+saveRDS(betas_std, "betas_dataset.RDS")
+saveRDS(dots_std, "dots_dataset.RDS")
+```
+
+## tidy data for plotting
+* Select cons generated across all sessions  
+* Calculate mean across ROIs within each psychological process  
+* Calculate balance score ROI = cognitive control - reward  
+
+```{r}
+ema_tidy = ema %>%
+  select(subjectID, enact_prop) %>%
+  unique() %>%
+  filter(!is.na(subjectID)) %>%
+  mutate(enact_prop_z = as.numeric(scale(enact_prop)))
+
+dots_plot = dots_std %>%
+  filter(!condition == "social" & mask == "unmasked" & session == "all") %>%
+  select(-c(map, con, mask, session, dotProduct)) %>%
+  left_join(., ind_diffs) %>%
+  select(-c(sample, DBIC_ID, age, gender)) %>%
+  left_join(., ema_tidy, by = "subjectID")
+
+betas_plot = betas_std %>%
+  filter(!condition == "social" & session == "all") %>%
+  group_by(subjectID, process, condition, control) %>%
+  mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE)) %>%
+  select(-c(con, xyz, roi, meanPE, sdPE, meanPE_std)) %>%
+  unique() %>%
+  spread(process, meanProcessPEstd) %>%
+  gather(process, meanProcessPEstd, cognitive_control, reward, value) %>%
+  select(-c(session)) %>%
+  left_join(., ind_diffs) %>%
+  select(-c(sample, DBIC_ID, age, gender)) %>%
+  ungroup() %>%
+  left_join(., ema_tidy, by = "subjectID")
+
+combined_plot = dots_plot %>%
+  rename("value_std" = dotProduct_std) %>%
+  mutate(test = ifelse(process == "craving_regulation", "neural signature", test)) %>%
+  select(subjectID, process, test, condition, control, value_std, fat, bmi, enact_prop) %>%
+  bind_rows(betas_plot %>%
+              rename("value_std" = meanProcessPEstd) %>%
+              mutate(test = "ROI") %>%
+              select(-contains("_z")))
+```
+
+## tidy data for modeling
+```{r}
+model_data = dataset %>%
+  filter(test == "association" & session == "all" & control == "nature" & condition == "food") %>%
+  unique() %>%
+  group_by(process, subjectID) %>%
+  mutate(meanProcessPEstd = mean(meanPE_std, na.rm = TRUE),
+         processPE = paste0(process, "_ROI"),
+         processPEV = paste0(process, "_PEV")) %>%
+  ungroup() %>%
+  select(-c(xyz, meanPE, meanPE_std, sdPE, dotProduct, map, process)) %>%
+  spread(processPEV, dotProduct_std) %>%
+  spread(processPE, meanProcessPEstd) %>%
+  group_by(subjectID) %>%
+  fill(contains("PEV"), .direction = "down") %>%
+  fill(contains("PEV"), .direction = "up") %>%
+  fill(contains("ROI"), .direction = "down") %>%
+  fill(contains("ROI"), .direction = "up") %>%
+  select(-c(roi, craving_ROI, craving_regulation_ROI, test, mask, age, gender)) %>%
+  unique()
+
+model_data_bmi = model_data %>%
+  select(-contains("fat"), -restraint) %>%
+  na.omit()
+
+model_data_fat = model_data %>%
+  select(-contains("bmi"), -restraint) %>%
+  na.omit()
+
+model_data_ema = model_data %>%
+  select(-contains("fat"), -contains("bmi"), -restraint) %>%
+  right_join(., ema_tidy, by = "subjectID") %>%
+  na.omit()
+```
+
+# visualize
+## DVs and dietary restraint
+```{r, fig.width=8, fig.height=4}
+# source raincloud plot
+source("https://gist.githubusercontent.com/benmarwick/2a1bb0133ff568cbe28d/raw/fb53bd97121f7f9ce947837ef1a4c65a73bffb3f/geom_flat_violin.R")
+
+# plot
+ind_diffs %>%
+  left_join(., ema_tidy, by = "subjectID") %>%
+  select(subjectID, bmi, fat, enact_prop, restraint) %>%
+  rename("BMI" = bmi,
+         "body fat percentage" = fat,
+         "enactment" = enact_prop,
+         "dietary restraint" = restraint) %>%
+  gather(var, val, -subjectID) %>%
+  mutate(var = factor(var, levels = c("BMI", "body fat percentage", "enactment", "dietary restraint"))) %>%
+  ggplot(aes("", val, fill = var, color = var)) +
+    geom_flat_violin(position = position_nudge(x = .1, y = 0), color = FALSE) +
+    geom_boxplot(width = .1, outlier.shape = NA, color = "black", fill = "white") +
+    geom_point(position = position_jitter(width = .05), size = .5, alpha = .75) +
+    facet_wrap(~var, scales = "free", nrow = 1) +
+    scale_fill_manual(values = c(pal_outcome, pal_condition[3])) +
+    scale_color_manual(values = c(pal_outcome, pal_condition[3])) +
+    scale_x_discrete(expand = c(.1, 0)) +
+    coord_flip() +
+    labs(y = "\nvalue", x = "") +
+    theme_minimal(base_size = 14) +
+    theme(legend.position = "none")
+```
+
+## combined
+```{r, fig.width=10, fig.height=10}
+combined_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature")),
+         process = gsub("_", " ", process),
+         test = factor(test, levels = c("neural signature", "ROI", "association", "uniformity"))) %>%
+  ggplot(aes(control, value_std, fill = condition)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_wrap(~ test + process, nrow = 3) +
+  scale_fill_manual(name = "", values = pal_condition) +
+  labs(x = "\ncontrol condition", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+```{r, fig.width=12, fig.height=10}
+combined_plot %>%
+  filter(!condition == "nature") %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature")),
+         process = gsub("_", " ", process),
+         process = ifelse(!test == "ROI", sprintf("%s PEV", process), sprintf("%s ROI", process)),
+         process = factor(process, levels = c("reward ROI", "reward PEV", "craving PEV",
+                                              "cognitive control ROI", "cognitive control PEV", "craving regulation PEV",
+                                              "value ROI", "value PEV")),
+         test = ifelse(!test %in% c("association", "uniformity"), "none", test),
+         test = factor(test, levels = c("none", "association", "uniformity"))) %>%
+  ggplot(aes(control, value_std, fill = process)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(test~condition) +
+  scale_fill_manual(name = "", values = pal_condition8) +
+  labs(x = "\ncontrol condition", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+## ROIs {.tabset}
+### means
+Mean parameter estimates as a function of process, stimulus type, and control condition
+
+```{r, fig.width=8, fig.height=4.5}
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(condition, meanProcessPEstd, fill = control)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(~process) +
+  scale_fill_manual(name = "", values = pal_control) +
+  labs(x = "\nstimulus", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(control, meanProcessPEstd, fill = condition)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(~process) +
+  scale_fill_manual(name = "", values = pal_condition) +
+  labs(x = "\ncontrol condition", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+### correlations
+Correlations between variables and BMI, % fat, or EMA enactment proportion
+```{r, fig.width=10, fig.height=8}
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(bmi, meanProcessPEstd, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control~process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nBMI", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(fat, meanProcessPEstd, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control~process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nbody composition (% fat)", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+betas_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(enact_prop, meanProcessPEstd, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control~process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\ndaily enactment proportion", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+## PEVs
+### means
+Mean expression as a function of process, stimulus type, control condition, and test
+
+```{r, fig.width=10, fig.height=8}
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(condition, dotProduct_std, fill = control)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(test~process) +
+  scale_fill_manual(name = "", values = pal_control) +
+  labs(x = "\nstimulus", y = "mean expression\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "nature"))) %>%
+  ggplot(aes(control, dotProduct_std, fill = condition)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "bar", position = position_dodge(.9)) +
+  stat_summary(fun.data = "mean_cl_boot", geom = "errorbar", position = position_dodge(.9), width = 0) +
+  facet_grid(test~process) +
+  scale_fill_manual(name = "", values = pal_condition) +
+  labs(x = "\ncontrol condition", y = "mean expression\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+### correlations
+Correlations between variables and BMI, % fat, or EMA enactment proportion
+```{r, fig.width=12, fig.height=12}
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(bmi, dotProduct_std, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control + test ~ process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nBMI", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(fat, dotProduct_std, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control + test ~ process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nbody composition (% fat)", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+
+dots_plot %>%
+  mutate(condition = factor(condition, levels = c("food", "dessert", "meal", "snack", "social", "nature"))) %>%
+  ggplot(aes(enact_prop, dotProduct_std, color = condition)) +
+  geom_point(alpha = .2) +
+  geom_smooth(method = "lm", alpha = .25) +
+  facet_grid(control + test ~ process) +
+  scale_color_manual(name = "", values = pal_condition) +
+  labs(x = "\nbody composition (% fat)", y = "mean standardized parameter estimate\n") +
+  theme_minimal(base_size = 14) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1),
+        legend.position = "top",
+        legend.box = "horizontal")
+```
+
+## correlations among ROIs and PEVs {.tabset}
+### PEVs v ROIs
+```{r, fig.width=14, fig.height=17}
+dots_plot %>%
+  unite(var, process, test, condition, control, sep = "_") %>%
+  mutate(var = sprintf("dot_%s", var)) %>%
+  spread(var, dotProduct_std) %>%
+  left_join(., betas_plot) %>%
+  unite(var, process, condition, control, sep = "_") %>%
+  mutate(var = sprintf("roi_%s", var)) %>%
+  spread(var, meanProcessPEstd) %>%
+  select(-subjectID, -contains("bmi"), -contains("fat"), -contains("restraint"), -contains("enact_prop")) %>%
+  cor(., use = "pairwise.complete.obs") %>%
+  reshape2::melt() %>%
+  filter(!grepl("dot", Var1) & !grepl("roi", Var2)) %>%
+  ggplot(aes(Var1, Var2, fill = value)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(name = "correlation\n", colors = c(pal_condition[1], "white", pal_condition[6]), limits = c(-1, 1), breaks = c(-1, 0, 1)) + 
+    geom_text(aes(label = round(value, 1)), size = 2) +
+    labs(x = "", y = "") + 
+    theme(legend.text = element_text(size = 8),
+          legend.position = "top",
+          legend.title = element_blank(),
+          axis.text = element_text(color = "black"),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+```
+
+### ROIs
+```{r, fig.width=10, fig.height=10}
+dots_plot %>%
+  unite(var, process, test, condition, control, sep = "_") %>%
+  mutate(var = sprintf("dot_%s", var)) %>%
+  spread(var, dotProduct_std) %>%
+  left_join(., betas_plot) %>%
+  unite(var, process, condition, control, sep = "_") %>%
+  mutate(var = sprintf("roi_%s", var)) %>%
+  spread(var, meanProcessPEstd) %>%
+  select(-subjectID) %>%
+  cor(., use = "pairwise.complete.obs") %>%
+  reshape2::melt() %>%
+  filter(grepl("roi", Var1) & grepl("roi", Var2)) %>%
+  ggplot(aes(Var1, Var2, fill = value)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(name = "correlation\n", colors = c(pal_condition[1], "white", pal_condition[6]), limits = c(-1, 1), breaks = c(-1, 0, 1)) + 
+    geom_text(aes(label = round(value, 1)), size = 2) +
+    labs(x = "", y = "") + 
+    theme(legend.text = element_text(size = 8),
+          legend.position = "top",
+          legend.title = element_blank(),
+          axis.text = element_text(color = "black"),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+
+```
+
+### PEVs
+```{r, fig.width=16, fig.height=16}
+dots_plot %>%
+  unite(var, process, test, condition, control, sep = "_") %>%
+  mutate(var = sprintf("dot_%s", var)) %>%
+  spread(var, dotProduct_std) %>%
+  left_join(., betas_plot) %>%
+  unite(var, process, condition, control, sep = "_") %>%
+  mutate(var = sprintf("roi_%s", var)) %>%
+  spread(var, meanProcessPEstd) %>%
+  select(-subjectID) %>%
+  cor(., use = "pairwise.complete.obs") %>%
+  reshape2::melt() %>%
+  filter(grepl("dot", Var1) & grepl("dot", Var2)) %>%
+  ggplot(aes(Var1, Var2, fill = value)) +
+    geom_tile(color = "white") +
+    scale_fill_gradientn(name = "correlation\n", colors = c(pal_condition[1], "white", pal_condition[6]), limits = c(-1, 1), breaks = c(-1, 0, 1)) + 
+    geom_text(aes(label = round(value, 1)), size = 2) +
+    labs(x = "", y = "") + 
+    theme(legend.text = element_text(size = 8),
+          legend.position = "top",
+          legend.title = element_blank(),
+          axis.text = element_text(color = "black"),
+          axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+          axis.line = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank())
+```
+
+# descriptives
+## means and sds
+```{r}
+model_data %>%
+  left_join(., model_data_ema) %>%
+  gather(Variable, val, contains("PEV"), contains("ROI"), bmi, fat, enact_prop, restraint) %>%
+  filter(!Variable == "balance_ROI") %>%
+  group_by(Variable) %>%
+  summarize(M = mean(val, na.rm = TRUE),
+            SD = sd(val, na.rm = TRUE)) %>%
+  filter(!is.na(Variable)) %>%
+  mutate(Variable = gsub("_", " ", Variable),
+         Variable = ifelse(Variable == "bmi", "BMI",
+                    ifelse(Variable == "fat", "Body fat percentage",
+                    ifelse(Variable == "enact prop", "Enactment",
+                    ifelse(Variable == "restraint", "Dietary restraint", Hmisc::capitalize(Variable))))),
+         Variable = factor(Variable, levels = c("BMI", "Body fat percentage", "Enactment",
+                                                "Reward ROI", "Reward PEV", "Craving PEV",
+                                                "Cognitive control ROI", "Cognitive control PEV", "Craving regulation PEV",
+                                                "Value ROI", "Value PEV",
+                                                "Dietary restraint"))) %>%
+  arrange(Variable) %>%
+  kable(format = "pandoc", digits = 2)
+```
+
+## correlations
+```{r}
+cor_mat = model_data %>%
+  left_join(., model_data_ema) %>%
+  select(subjectID, bmi, fat, enact_prop, contains("ROI"), contains("PEV"), restraint) %>%
+  gather(var, val, contains("PEV"), contains("ROI"), bmi, fat, enact_prop, restraint) %>%
+  mutate(var = gsub("_", " ", var),
+         var = ifelse(var == "bmi", "BMI",
+               ifelse(var == "fat", "Body fat percentage",
+               ifelse(var == "enact prop", "Enactment",
+               ifelse(var == "restraint", "Dietary restraint", Hmisc::capitalize(var))))),
+         var = factor(var, levels = c("BMI", "Body fat percentage", "Enactment",
+                                      "Reward ROI", "Reward PEV", "Craving PEV",
+                                      "Cognitive control ROI", "Cognitive control PEV", "Craving regulation PEV",
+                                      "Value ROI", "Value PEV",
+                                      "Dietary restraint"))) %>%
+  arrange(var) %>%
+  spread(var, val) %>%
+  ungroup() %>%
+  select(-subjectID) %>%
+  as.matrix()
+
+cors = Hmisc::rcorr(cor_mat)
+
+p = cors$P %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  gather(var, p_value, -rowname) %>%
+  mutate(code = ifelse(between(p_value, .05, .1), "†",
+                ifelse(between(p_value, .01, .05), "*", 
+                ifelse(between(p_value, .001, .01), "**",
+                ifelse(p_value < .001, "***", "")))))
+
+cors$r %>%
+  as.data.frame() %>%
+  rownames_to_column() %>%
+  gather(var, val, -rowname) %>%
+  left_join(., p) %>%
+  mutate(val = gsub("0.(.*)", ".\\1", sprintf("%.2f%s", val, code)),
+         val = gsub("1..NA", "--", val),
+         rowname = factor(rowname, levels = c("BMI", "Body fat percentage", "Enactment",
+                                      "Reward ROI", "Reward PEV", "Craving PEV",
+                                      "Cognitive control ROI", "Cognitive control PEV", "Craving regulation PEV",
+                                      "Value ROI", "Value PEV",
+                                      "Dietary restraint"))) %>%
+  select(-p_value, -code) %>%
+  spread(var, val) %>%
+  rename(" " = rowname) %>%
+  select(" ", "BMI", "Body fat percentage", "Enactment",
+         "Reward ROI", "Reward PEV", "Craving PEV",
+         "Cognitive control ROI", "Cognitive control PEV", "Craving regulation PEV",
+         "Value ROI", "Value PEV",
+         "Dietary restraint") %>%
+  kable(format = "pandoc")
+```
+
+## t-tests
+```{r}
+model_data %>%
+  select(-contains("z"), -contains("age"), -contains("restraint"), -bmi, -fat) %>%
+  ungroup() %>%
+  select_if(is.numeric) %>%
+  map_df(~ broom::tidy(t.test(.x, mu = 0, na.action = "na.omit")), .id = "x") %>%
+  rename("Variable" = x,
+         "t" = statistic,
+         "df" = parameter,
+         "p" = p.value) %>%
+  mutate(`Mdiff [95% CI]` = sprintf("%.02f [%.02f, %.02f]", estimate, conf.low, conf.high),
+         p = ifelse(p < .001, "< .001", gsub("0.(.*)", ".\\1", sprintf("%.3f", p))),
+         Variable = gsub("_", " ", Variable),
+         Variable = Hmisc::capitalize(Variable),
+         Variable = factor(Variable, levels = c("Reward ROI", "Reward PEV", "Craving PEV",
+                                                "Cognitive control ROI", "Cognitive control PEV", "Craving regulation PEV",
+                                                "Value ROI", "Value PEV"))) %>%
+  select(Variable, `Mdiff [95% CI]`, t, df, p) %>%
+  arrange(Variable) %>%
+  kable(format = "pandoc", digits = 2)
+```
+
+# run cross-validated models
+## specify model variables
+```{r}
+options(na.action = "na.fail")
+data_ctrl = caret::trainControl(method = "repeatedcv", number = 5, repeats = 5)
+set.seed(123)
+```
+
+## BMI {.tabset}
+### ROI models
+```{r}
+bmi_roi_full = lm(bmi_z ~ value_ROI + reward_ROI + cognitive_control_ROI, data = model_data_bmi)
+(bmi_roi_mods = MuMIn::dredge(bmi_roi_full))
+```
+
+```{r}
+MuMIn::get.models(bmi_roi_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_bmi_roi = caret::train(bmi_z ~ reward_ROI + value_ROI,
+                     data = model_data_bmi,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### PEV models
+```{r}
+bmi_pev_full = lm(bmi_z ~ value_PEV + reward_PEV + cognitive_control_PEV + craving_PEV + craving_regulation_PEV, data = model_data_bmi)
+(bmi_pev_mods = MuMIn::dredge(bmi_pev_full))
+```
+
+```{r}
+MuMIn::get.models(bmi_pev_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_bmi_pev = caret::train(bmi_z ~ craving_regulation_PEV,
+                     data = model_data_bmi,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### combined
+```{r}
+bmi_null = lm(bmi_z ~ 1, data = model_data_bmi)
+summary(bmi_null)
+
+bmi_combined = caret::train(bmi_z ~ reward_ROI + value_ROI + craving_regulation_PEV,
+                     data = model_data_bmi,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+(bmi_aic = AIC(bmi_null, best_bmi_roi$finalModel, best_bmi_pev$finalModel, bmi_combined$finalModel) %>%
+    rownames_to_column() %>%
+    extract(rowname, "model", ".*bmi_(.*)\\$.*") %>%
+    mutate(model = toupper(model),
+           model = ifelse(is.na(model), "Null", model)) %>%
+  arrange(AIC))
+```
+
+#### summarize the overall best fitting
+```{r}
+# ROI
+summary(best_bmi_roi$finalModel)
+best_bmi_roi
+sd(best_bmi_roi$resample$Rsquared)
+sd(best_bmi_roi$resample$RMSE)
+
+# combined
+summary(bmi_combined$finalModel)
+bmi_combined
+sd(bmi_combined$resample$Rsquared)
+sd(bmi_combined$resample$RMSE)
+```
+
+## % fat {.tabset}
+### ROI models
+```{r}
+fat_roi_full = lm(fat_z ~ value_ROI + reward_ROI + cognitive_control_ROI, data = model_data_fat)
+(fat_roi_mods = MuMIn::dredge(fat_roi_full))
+```
+
+```{r}
+MuMIn::get.models(fat_roi_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_fat_roi = caret::train(fat_z ~ reward_ROI,
+                     data = model_data_fat,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### PEV models
+```{r}
+fat_pev_full = lm(fat_z ~ value_PEV + reward_PEV + cognitive_control_PEV + craving_PEV + craving_regulation_PEV, data = model_data_fat)
+(fat_pev_mods = MuMIn::dredge(fat_pev_full))
+```
+
+```{r}
+MuMIn::get.models(fat_pev_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_fat_pev = caret::train(fat_z ~ craving_PEV,
+                     data = model_data_fat,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### combined
+```{r}
+fat_null = lm(fat_z ~ 1, data = model_data_fat)
+
+fat_combined = caret::train(fat_z ~ reward_ROI + craving_PEV,
+                     data = model_data_fat,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+(fat_aic = AIC(fat_null, best_fat_roi$finalModel, best_fat_pev$finalModel, fat_combined$finalModel) %>%
+    rownames_to_column() %>%
+    extract(rowname, "model", ".*fat_(.*)\\$.*") %>%
+    mutate(model = toupper(model),
+           model = ifelse(is.na(model), "Null", model)) %>%
+    arrange(AIC))
+```
+
+### summarize the overall best fitting
+```{r}
+summary(fat_null)
+```
+
+
+## EMA enactment proportion {.tabset}
+### ROI models
+```{r}
+enact_prop_roi_full = lm(enact_prop_z ~ value_ROI + reward_ROI + cognitive_control_ROI, data = model_data_ema)
+(enact_prop_roi_mods = MuMIn::dredge(enact_prop_roi_full))
+```
+
+```{r}
+MuMIn::get.models(enact_prop_roi_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_enact_prop_roi = caret::train(enact_prop_z ~ value_ROI,
+                     data = model_data_ema,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### PEV models
+```{r}
+enact_prop_pev_full = lm(enact_prop_z ~ value_PEV + reward_PEV + cognitive_control_PEV + craving_PEV + craving_regulation_PEV, data = model_data_ema)
+(enact_prop_pev_mods = MuMIn::dredge(enact_prop_pev_full))
+```
+
+```{r}
+MuMIn::get.models(enact_prop_pev_mods, subset = TRUE) %>%
+  tibble() %>%
+  rename("model" = ".") %>%
+  mutate(tidied = purrr::map(model, broom::tidy),
+         model_num = row_number()) %>%
+  select(model_num, tidied) %>%
+  unnest()
+
+best_enact_prop_pev = caret::train(enact_prop_z ~ reward_PEV,
+                     data = model_data_ema,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+```
+
+### combined
+```{r}
+enact_prop_null = lm(enact_prop_z ~ 1, data = model_data_ema)
+
+enact_prop_combined = caret::train(enact_prop_z ~ value_ROI + reward_PEV,
+                     data = model_data_ema,
+                     trControl = data_ctrl,
+                     method = "lm",
+                     na.action = na.omit)
+
+(enact_aic = AIC(enact_prop_null, best_enact_prop_roi$finalModel, best_enact_prop_pev$finalModel, enact_prop_combined$finalModel) %>%
+    rownames_to_column() %>%
+    extract(rowname, "model", ".*prop_(.*)\\$.*") %>%
+    mutate(model = toupper(model),
+           model = ifelse(is.na(model), "Null", model)) %>%
+  arrange(AIC))
+
+```
+
+### summarize the overall best fitting
+```{r}
+summary(best_enact_prop_pev$finalModel)
+best_enact_prop_pev
+sd(best_enact_prop_pev$resample$Rsquared)
+sd(best_enact_prop_pev$resample$RMSE)
+```
+
+# tables {.tabset}
+## bmi
+```{r}
+bmi_fit = data.frame(model = c("ROI", "PEV", "COMBINED"),
+                     r2 = c(mean(best_bmi_roi$resample$Rsquared), 
+                            mean(best_bmi_pev$resample$Rsquared), 
+                            mean(bmi_combined$resample$Rsquared)),
+                     r2_sd = c(sd(best_bmi_roi$resample$Rsquared), 
+                               sd(best_bmi_pev$resample$Rsquared), 
+                               sd(bmi_combined$resample$Rsquared)),
+                     RMSE = c(mean(best_bmi_roi$resample$RMSE), 
+                              mean(best_bmi_pev$resample$RMSE), 
+                              mean(bmi_combined$resample$RMSE)),
+                     RMSE_sd = c(sd(best_bmi_roi$resample$RMSE), 
+                                 sd(best_bmi_pev$resample$RMSE), 
+                                 sd(bmi_combined$resample$RMSE)))
+
+bmi_table = broom::tidy(best_bmi_roi$finalModel, conf.int = TRUE) %>% 
+  mutate(model = "ROI", 
+         mod_sig = ifelse(pf(summary(best_bmi_roi$finalModel)$fstatistic[1], 
+                             summary(best_bmi_roi$finalModel)$fstatistic[2], 
+                             summary(best_bmi_roi$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", "")) %>%
+  bind_rows(broom::tidy(best_bmi_pev$finalModel, conf.int = TRUE) %>% 
+              mutate(model = "PEV",
+                     mod_sig = ifelse(pf(summary(best_bmi_pev$finalModel)$fstatistic[1], 
+                             summary(best_bmi_pev$finalModel)$fstatistic[2], 
+                             summary(best_bmi_pev$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", ""))) %>%
+  bind_rows(broom::tidy(bmi_combined$finalModel, conf.int = TRUE) %>% 
+              mutate(model = "COMBINED",
+                     mod_sig = ifelse(pf(summary(bmi_combined$finalModel)$fstatistic[1], 
+                             summary(bmi_combined$finalModel)$fstatistic[2], 
+                             summary(bmi_combined$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", ""))) %>%
+  bind_rows(broom::tidy(bmi_null, conf.int = TRUE) %>% mutate(model = "Null", mod_sig = "")) %>%
+  rename("SE" = std.error,
+         "t" = statistic,
+         "p" = p.value) %>%
+  mutate(`b [95% CI]` = sprintf("%.2f [%.2f, %.2f]", estimate, conf.low, conf.high),
+         p = ifelse(p < .001, "< .001", gsub("0.(.*)", ".\\1", sprintf("%.3f", p))),
+         term = gsub("\\(Intercept\\)", "Intercept", term),
+         term = gsub("_", " ", term),
+         term = Hmisc::capitalize(term)) %>%
+  left_join(., bmi_aic) %>%
+  left_join(., bmi_fit) %>%
+  mutate(`r2 (SD)` = ifelse(!model == "Null", sprintf("%.2f (%.2f)", r2, r2_sd), "--"),
+         `RMSE (SD)` = ifelse(!model == "Null", sprintf("%.2f (%.2f)", RMSE, RMSE_sd), "--")) %>%
+  unite(model, model, mod_sig, sep = "") %>%
+  select(model, AIC, `r2 (SD)`, `RMSE (SD)`, term, `b [95% CI]`, SE, t, p) %>%
+  arrange(AIC) %>%
+  mutate(model = gsub("COMBINED", "Combined", model),
+         outcome = "BMI") %>%
+    select(outcome, model, AIC, `r2 (SD)`, `RMSE (SD)`, term, `b [95% CI]`, SE, t, p)
+
+bmi_table %>%
+  kable(format = "pandoc", digits = 2)
+```
+
+## % fat
+```{r}
+fat_fit = data.frame(model = c("ROI", "PEV", "COMBINED"),
+                     r2 = c(mean(best_fat_roi$resample$Rsquared), 
+                            mean(best_fat_pev$resample$Rsquared), 
+                            mean(fat_combined$resample$Rsquared)),
+                     r2_sd = c(sd(best_fat_roi$resample$Rsquared), 
+                               sd(best_fat_pev$resample$Rsquared), 
+                               sd(fat_combined$resample$Rsquared)),
+                     RMSE = c(mean(best_fat_roi$resample$RMSE), 
+                              mean(best_fat_pev$resample$RMSE), 
+                              mean(fat_combined$resample$RMSE)),
+                     RMSE_sd = c(sd(best_fat_roi$resample$RMSE), 
+                                 sd(best_fat_pev$resample$RMSE), 
+                                 sd(fat_combined$resample$RMSE)))
+
+fat_table = broom::tidy(best_fat_roi$finalModel, conf.int = TRUE) %>% 
+  mutate(model = "ROI", 
+         mod_sig = ifelse(pf(summary(best_fat_roi$finalModel)$fstatistic[1], 
+                             summary(best_fat_roi$finalModel)$fstatistic[2], 
+                             summary(best_fat_roi$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", "")) %>%
+  bind_rows(broom::tidy(best_fat_pev$finalModel, conf.int = TRUE) %>% 
+              mutate(model = "PEV",
+                     mod_sig = ifelse(pf(summary(best_fat_pev$finalModel)$fstatistic[1], 
+                             summary(best_fat_pev$finalModel)$fstatistic[2], 
+                             summary(best_fat_pev$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", ""))) %>%
+  bind_rows(broom::tidy(fat_combined$finalModel, conf.int = TRUE) %>% 
+              mutate(model = "COMBINED",
+                     mod_sig = ifelse(pf(summary(fat_combined$finalModel)$fstatistic[1], 
+                             summary(fat_combined$finalModel)$fstatistic[2], 
+                             summary(fat_combined$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", ""))) %>%
+  bind_rows(broom::tidy(fat_null, conf.int = TRUE) %>% mutate(model = "Null", mod_sig = "")) %>%
+  rename("SE" = std.error,
+         "t" = statistic,
+         "p" = p.value) %>%
+  mutate(`b [95% CI]` = sprintf("%.2f [%.2f, %.2f]", estimate, conf.low, conf.high),
+         p = ifelse(p < .001, "< .001", gsub("0.(.*)", ".\\1", sprintf("%.3f", p))),
+         term = gsub("\\(Intercept\\)", "Intercept", term),
+         term = gsub("_", " ", term),
+         term = Hmisc::capitalize(term)) %>%
+  left_join(., fat_aic) %>%
+  left_join(., fat_fit) %>%
+  mutate(`r2 (SD)` = ifelse(!model == "Null", sprintf("%.2f (%.2f)", r2, r2_sd), "--"),
+         `RMSE (SD)` = ifelse(!model == "Null", sprintf("%.2f (%.2f)", RMSE, RMSE_sd), "--")) %>%
+  unite(model, model, mod_sig, sep = "") %>%
+  select(model, AIC, `r2 (SD)`, `RMSE (SD)`, term, `b [95% CI]`, SE, t, p) %>%
+  arrange(AIC) %>%
+  mutate(model = gsub("COMBINED", "Combined", model),
+         outcome = "Body fat") %>%
+    select(outcome, model, AIC, `r2 (SD)`, `RMSE (SD)`, term, `b [95% CI]`, SE, t, p)
+
+fat_table %>%
+  kable(format = "pandoc", digits = 2)
+```
+
+## EMA enactment
+```{r}
+enact_prop_fit = data.frame(model = c("ROI", "PEV", "COMBINED"),
+                     r2 = c(mean(best_enact_prop_roi$resample$Rsquared), 
+                            mean(best_enact_prop_pev$resample$Rsquared), 
+                            mean(enact_prop_combined$resample$Rsquared)),
+                     r2_sd = c(sd(best_enact_prop_roi$resample$Rsquared), 
+                               sd(best_enact_prop_pev$resample$Rsquared), 
+                               sd(enact_prop_combined$resample$Rsquared)),
+                     RMSE = c(mean(best_enact_prop_roi$resample$RMSE), 
+                              mean(best_enact_prop_pev$resample$RMSE), 
+                              mean(enact_prop_combined$resample$RMSE)),
+                     RMSE_sd = c(sd(best_enact_prop_roi$resample$RMSE), 
+                                 sd(best_enact_prop_pev$resample$RMSE), 
+                                 sd(enact_prop_combined$resample$RMSE)))
+
+enact_table = broom::tidy(best_enact_prop_roi$finalModel, conf.int = TRUE) %>% 
+  mutate(model = "ROI", 
+         mod_sig = ifelse(pf(summary(best_enact_prop_roi$finalModel)$fstatistic[1], 
+                             summary(best_enact_prop_roi$finalModel)$fstatistic[2], 
+                             summary(best_enact_prop_roi$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", "")) %>%
+  bind_rows(broom::tidy(best_enact_prop_pev$finalModel, conf.int = TRUE) %>% 
+              mutate(model = "PEV",
+                     mod_sig = ifelse(pf(summary(best_enact_prop_pev$finalModel)$fstatistic[1], 
+                             summary(best_enact_prop_pev$finalModel)$fstatistic[2], 
+                             summary(best_enact_prop_pev$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", ""))) %>%
+  bind_rows(broom::tidy(enact_prop_combined$finalModel, conf.int = TRUE) %>% 
+              mutate(model = "COMBINED",
+                     mod_sig = ifelse(pf(summary(enact_prop_combined$finalModel)$fstatistic[1], 
+                             summary(enact_prop_combined$finalModel)$fstatistic[2], 
+                             summary(enact_prop_combined$finalModel)$fstatistic[3], lower = FALSE) < .05, "*", ""))) %>%
+  bind_rows(broom::tidy(enact_prop_null, conf.int = TRUE) %>% mutate(model = "Null", mod_sig = "")) %>%
+  rename("SE" = std.error,
+         "t" = statistic,
+         "p" = p.value) %>%
+  mutate(`b [95% CI]` = sprintf("%.2f [%.2f, %.2f]", estimate, conf.low, conf.high),
+         p = ifelse(p < .001, "< .001", gsub("0.(.*)", ".\\1", sprintf("%.3f", p))),
+         term = gsub("\\(Intercept\\)", "Intercept", term),
+         term = gsub("_", " ", term),
+         term = Hmisc::capitalize(term)) %>%
+  left_join(., enact_aic) %>%
+  left_join(., enact_prop_fit) %>%
+  mutate(`r2 (SD)` = ifelse(!model == "Null", sprintf("%.2f (%.2f)", r2, r2_sd), "--"),
+         `RMSE (SD)` = ifelse(!model == "Null", sprintf("%.2f (%.2f)", RMSE, RMSE_sd), "--")) %>%
+  unite(model, model, mod_sig, sep = "") %>%
+  select(model, AIC, `r2 (SD)`, `RMSE (SD)`, term, `b [95% CI]`, SE, t, p) %>%
+  arrange(AIC) %>%
+  mutate(model = gsub("COMBINED", "Combined", model),
+         outcome = "Enactment") %>%
+    select(outcome, model, AIC, `r2 (SD)`, `RMSE (SD)`, term, `b [95% CI]`, SE, t, p)
+
+enact_table %>%
+  kable(format = "pandoc", digits = 2)
+```
+
+## combined
+```{r}
+bind_rows(bmi_table, fat_table, enact_table) %>%
+  kable(format = "pandoc", digits = 2)
+```
+
+# VIF
+```{r}
+# BMI
+car::vif(bmi_combined$finalModel)
+
+# %fat
+car::vif(fat_combined$finalModel)
+
+# enactment
+car::vif(enact_prop_combined$finalModel)
+```
